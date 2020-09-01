@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=SafeDeal
+Comment=SafeDeal P2P Cryptocurrency
+Comment[fr]=SafeDeal, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=SafeDeal, eşten eşe kriptografik sanal para birimi
+Exec=safedeal-qt %u
+Terminal=false
+Type=Application
+Icon=safedeal128
+MimeType=x-scheme-handler/safedeal;
+Categories=Office;Finance;
+StartupWMClass=SafeDeal-qt

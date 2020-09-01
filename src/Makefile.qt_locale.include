@@ -1,0 +1,14 @@
+QT_TS = \
+  qt/locale/safedeal_de.ts \
+  qt/locale/safedeal_en.ts \
+  qt/locale/safedeal_en_US.ts \
+  qt/locale/safedeal_es.ts \
+  qt/locale/safedeal_fr_FR.ts \
+  qt/locale/safedeal_hr_HR.ts \
+  qt/locale/safedeal_it.ts \
+  qt/locale/safedeal_ko_KR.ts \
+  qt/locale/safedeal_nl.ts \
+  qt/locale/safedeal_pl.ts \
+  qt/locale/safedeal_ru.ts \
+  qt/locale/safedeal_tr.ts \
+  qt/locale/safedeal_zh_CN.ts

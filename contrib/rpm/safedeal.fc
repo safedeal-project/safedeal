@@ -1,0 +1,8 @@
+/usr/bin/safedeal-cli		--	gen_context(system_u:object_r:safedeal_exec_t,s0)
+/usr/sbin/safedeald		--	gen_context(system_u:object_r:safedeal_exec_t,s0)
+/usr/lib(64)?/safedeal/safedeald		--	gen_context(system_u:object_r:safedeal_exec_t,s0)
+
+/etc/safedeal(/.*)?		gen_context(system_u:object_r:safedeal_conf_t,s0)
+/var/lib/safedeal(/.*)?		gen_context(system_u:object_r:safedeal_var_lib_t,s0)
+
+(/var)?/run/safedeald(/.*)?   gen_context(system_u:object_r:safedeal_var_run_t,s0)

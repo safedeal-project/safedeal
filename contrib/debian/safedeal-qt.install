@@ -1,0 +1,6 @@
+usr/local/bin/safedeal-qt usr/bin
+share/pixmaps/safedeal32.xpm usr/share/pixmaps
+share/pixmaps/safedeal16.xpm usr/share/pixmaps
+share/pixmaps/safedeal128.png usr/share/pixmaps
+debian/safedeal-qt.desktop usr/share/applications
+debian/safedeal-qt.protocol usr/share/kde4/services/

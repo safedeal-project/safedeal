@@ -1,0 +1,15 @@
+# http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.0.html
+
+[Desktop Entry]
+Encoding=UTF-8
+Name=SFD_Coin
+Comment=SFD_Coin QT main network
+GenericName=SFD_Coin Digital Currency QT client main network
+Exec=sfd_coin-core.qt %u
+Terminal=false
+Type=Application
+Icon=${SNAP}/share/pixmaps/sfd_coin.png
+MimeType=x-scheme-handler/sfd_coin;
+Categories=X-Office;X-Finance;
+Keywords=internet;sfd_coin;zsfd;sfd;core;wallet;qt;main;snap;launchpad;crypto;digital;currency;coin;token;zerocoin;
+Version=1.0
