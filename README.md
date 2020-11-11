@@ -7,7 +7,7 @@
  - Need help? [Create ticket](https://safedeal.freshdesk.com) 
  - Join community in [Discord](https://discord.gg/D3cD2Rn) 
  - Read news in [Telegram](https://t.me/safedealp2p) & [Twitter](https://twitter.com/SafeDealP2P)
- - Read us on [Medium](http://safedeal.trade) & [Reddit](https://www.reddit.com/r/SafeDealP2P)
+ - Read us on [Medium](https://medium.com/@SafeDealP2P) & [Reddit](https://www.reddit.com/r/SafeDealP2P)
   
   
 <h2><strong>Specification:</strong></h2>
