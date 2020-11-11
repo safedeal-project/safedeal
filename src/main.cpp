@@ -1632,41 +1632,41 @@ int64_t GetBlockValue(int nHeight)
     }else if (nHeight < 115209) {
         nSubsidy = 1.3 * COIN;
     }else if (nHeight < 129610) {
-        nSubsidy = 1.4 * COIN;
+        nSubsidy = 1.32 * COIN;
     }else if (nHeight < 144011) {
-        nSubsidy = 1.5 * COIN;
+        nSubsidy = 1.34 * COIN;
     }else if (nHeight < 158412) {
-        nSubsidy = 1.6 * COIN;
+        nSubsidy = 1.36 * COIN;
     }else if (nHeight < 172813) {
-        nSubsidy = 1.7 * COIN;
+        nSubsidy = 1.38 * COIN;
     }else if (nHeight < 187214) {
-        nSubsidy = 1.8 * COIN;
+        nSubsidy = 1.4 * COIN;
     }else if (nHeight < 201615) {
-        nSubsidy = 1.9 * COIN;
+        nSubsidy = 1.42 * COIN;
     }else if (nHeight < 216016) {
-        nSubsidy = 2 * COIN;
+        nSubsidy = 1.44 * COIN;
     }else if (nHeight < 230417) {
-        nSubsidy = 2.1 * COIN;
+        nSubsidy = 1.46 * COIN;
     }else if (nHeight < 403218) {
-        nSubsidy = 2.2 * COIN;
+        nSubsidy = 1.5 * COIN;
     }else if (nHeight < 748819) {
-        nSubsidy = 2.3 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 1094420) {
-        nSubsidy = 2.4 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 1440021) {
-        nSubsidy = 2.5 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 1785622) {
-        nSubsidy = 2.6 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 2131223) {
-        nSubsidy = 2.7 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 2476824) {
-        nSubsidy = 2.8 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 2822425) {
-        nSubsidy = 2.9 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 3300506) {
-        nSubsidy = 3 * COIN;
+        nSubsidy = 2 * COIN;
     }else if (nHeight < 3818907) {
-        nSubsidy = 3.1 * COIN;
+        nSubsidy = 2 * COIN;
     }else{
         nSubsidy = 0 * COIN; 
     }
@@ -1676,21 +1676,19 @@ int64_t GetBlockValue(int nHeight)
 
 int64_t GetMasternodePayment(int nHeight, int64_t blockValue)
 {
-        int64_t mnSubsidy = 0;
+    int64_t mnSubsidy = 0;
     if (nHeight < 36003) {
         mnSubsidy = blockValue * 0.8; 
     }else if (nHeight < 57605) {
         mnSubsidy = blockValue * 0.75;
     }else if (nHeight < 86407) {
         mnSubsidy = blockValue * 0.70;
-    }else if (nHeight < 230417) {
+    }else if (nHeight < 115209) {
         mnSubsidy = blockValue * 0.65;
-    }else if (nHeight < 403218) {
+    }else if (nHeight < 144011) {
         mnSubsidy = blockValue * 0.70;
-    }else if (nHeight < 748819) {
+    }else if (nHeight < 158412) {
         mnSubsidy = blockValue * 0.75;
-    }else if (nHeight < 3818907) {
-        mnSubsidy = blockValue * 0.8;
     }else{
         mnSubsidy = blockValue * 0.8;
     } 
@@ -5682,11 +5680,11 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 //       it was the one which was commented out
 int ActiveProtocol()
 {
-    // SPORK_14 is used for 70919 (v4.1.1)
+    // SPORK_14 is used for 70920 (v1.1.0)
     if (sporkManager.IsSporkActive(SPORK_14_NEW_PROTOCOL_ENFORCEMENT))
             return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
 
-    // SPORK_15 was used for 70918 (v4.0, v4.1.0), commented out now.
+    // SPORK_15 was used for 70919 (v1.0.0), commented out now.
     //if (sporkManager.IsSporkActive(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2))
     //        return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
 
@@ -5909,7 +5907,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         // Resend wallet transactions that haven't gotten in a block yet
         // Except during reindex, importing and IBD, when old wallet
         // transactions become unconfirmed and spams other nodes.
-        if (!fReindex /*&& !fImporting && !IsInitialBlockDownload()*/) {
+        if (!fReindex && !fImporting && !IsInitialBlockDownload()) {
             GetMainSignals().Broadcast();
         }
 

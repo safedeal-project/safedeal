@@ -1172,11 +1172,6 @@ UniValue getblockindexstats(const UniValue& params, bool fHelp) {
     ret.push_back(Pair("Starting block", heightStart));
     ret.push_back(Pair("Ending block", heightEnd));
 
-    bool fFeeOnly = false;
-    if (params.size() > 2) {
-        fFeeOnly = params[2].get_bool();
-    }
-
     CAmount nFees = 0;
     CAmount nFees_all = 0;
     int64_t nBytes = 0;

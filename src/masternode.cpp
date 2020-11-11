@@ -24,23 +24,31 @@ std::map<int64_t, uint256> mapCacheBlockHashes;
 //Get the last hash that matches the modulus given. Processed in reverse order
 bool GetBlockHash(uint256& hash, int nBlockHeight)
 {
-    if (chainActive.Tip() == NULL) return false;
+    int tipHeight;
+    const CBlockIndex* tipIndex;
+    {
+        LOCK(cs_main);
+        CBlockIndex *pindex = chainActive.Tip();
+        if (!pindex) return false;
+        tipHeight = pindex->nHeight;
+        tipIndex = mapBlockIndex[pindex->GetBlockHash()];
+    }
 
     if (nBlockHeight == 0)
-        nBlockHeight = chainActive.Tip()->nHeight;
+        nBlockHeight = tipHeight;
 
     if (mapCacheBlockHashes.count(nBlockHeight)) {
         hash = mapCacheBlockHashes[nBlockHeight];
         return true;
     }
 
-    const CBlockIndex* BlockLastSolved = chainActive.Tip();
-    const CBlockIndex* BlockReading = chainActive.Tip();
+    const CBlockIndex* BlockLastSolved = tipIndex;
+    const CBlockIndex* BlockReading = tipIndex;
 
-    if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || chainActive.Tip()->nHeight + 1 < nBlockHeight) return false;
+    if (BlockLastSolved == nullptr || BlockLastSolved->nHeight == 0 || tipHeight + 1 < nBlockHeight) return false;
 
     int nBlocksAgo = 0;
-    if (nBlockHeight > 0) nBlocksAgo = (chainActive.Tip()->nHeight + 1) - nBlockHeight;
+    if (nBlockHeight > 0) nBlocksAgo = (tipHeight + 1) - nBlockHeight;
     assert(nBlocksAgo >= 0);
 
     int n = 0;
@@ -142,7 +150,7 @@ bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
         addr = mnb.addr;
         lastTimeChecked = 0;
         int nDoS = 0;
-        if (mnb.lastPing == CMasternodePing() || (mnb.lastPing != CMasternodePing() && mnb.lastPing.CheckAndUpdate(nDoS, false))) {
+        if (mnb.lastPing.IsNull() || (!mnb.lastPing.IsNull() && mnb.lastPing.CheckAndUpdate(nDoS, false))) {
             lastPing = mnb.lastPing;
             mnodeman.mapSeenMasternodePing.insert(std::make_pair(lastPing.GetHash(), lastPing));
         }
@@ -158,7 +166,10 @@ bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
 //
 uint256 CMasternode::CalculateScore(int mod, int64_t nBlockHeight)
 {
-    if (chainActive.Tip() == NULL) return UINT256_ZERO;
+    {
+        LOCK(cs_main);
+        if (chainActive.Tip() == NULL) return UINT256_ZERO;
+    }
 
     uint256 hash;
     uint256 aux = vin.prevout.hash + vin.prevout.n;
@@ -499,7 +510,7 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
     }
 
     // incorrect ping or its sigTime
-    if(lastPing == CMasternodePing() || !lastPing.CheckAndUpdate(nDos, false, true))
+    if(lastPing.IsNull() || !lastPing.CheckAndUpdate(nDos, false, true))
     return false;
 
     if (protocolVersion < masternodePayments.GetMinMasternodePaymentsProto()) {
@@ -583,7 +594,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
         return true;
 
     // incorrect ping or its sigTime
-    if(lastPing == CMasternodePing() || !lastPing.CheckAndUpdate(nDoS, false, true)) return false;
+    if(lastPing.IsNull() || !lastPing.CheckAndUpdate(nDoS, false, true)) return false;
 
     // search existing Masternode list
     CMasternode* pmn = mnodeman.Find(vin);

@@ -70,7 +70,8 @@ public:
     uint256 GetSignatureHash() const override { return GetHash(); }
     std::string GetStrMessage() const override;
     const CTxIn GetVin() const override  { return vin; };
-
+    bool IsNull() { return blockHash.IsNull() || vin.prevout.IsNull(); }
+    
     bool CheckAndUpdate(int& nDos, bool fRequireEnabled = true, bool fCheckSigTimeOnly = false);
     void Relay();
 
@@ -236,7 +237,7 @@ public:
     {
         now == -1 ? now = GetAdjustedTime() : now;
 
-        return (lastPing == CMasternodePing()) ? false : now - lastPing.sigTime < seconds;
+        return lastPing.IsNull() ? false : now - lastPing.sigTime < seconds;
     }
 
     void Disable()
@@ -252,14 +253,20 @@ public:
 
     int GetMasternodeInputAge()
     {
-        if (chainActive.Tip() == NULL) return 0;
+        int tipHeight;
+        {
+            LOCK(cs_main);
+            CBlockIndex *pindex = chainActive.Tip();
+            if (!pindex) return 0;
+            tipHeight = pindex->nHeight;
+        }
 
         if (cacheInputAge == 0) {
             cacheInputAge = GetInputAge(vin);
-            cacheInputAgeBlock = chainActive.Tip()->nHeight;
+            cacheInputAgeBlock = tipHeight;
         }
 
-        return cacheInputAge + (chainActive.Tip()->nHeight - cacheInputAgeBlock);
+        return cacheInputAge + (tipHeight - cacheInputAgeBlock);
     }
 
     std::string Status()

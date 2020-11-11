@@ -6,8 +6,8 @@
         <translation>Dialog</translation>
     </message>
     <message>
-        <source>My Address</source>
-        <translation>Meine Adresse</translation>
+        <source>New Address</source>
+        <translation>Neue Adresse</translation>
     </message>
     <message>
         <source>Address</source>
@@ -15,15 +15,15 @@
     </message>
     <message>
         <source>PushButton</source>
-        <translation>Druckknopf</translation>
+        <translation>Schaltfläche</translation>
     </message>
     <message>
         <source>CANCEL</source>
         <translation>ABBRECHEN</translation>
     </message>
     <message>
-        <source>OK</source>
-        <translation>OK</translation>
+        <source>SAVE</source>
+        <translation>SPEICHERN</translation>
     </message>
 </context>
 <context>
@@ -50,7 +50,7 @@
     </message>
     <message>
         <source>Set a label for the selected address</source>
-        <translation>Der ausgewählten Adresse ein Label zuweisen</translation>
+        <translation>Der ausgewählten Adresse eine Bezeichnung zuweisen</translation>
     </message>
     <message>
         <source>Enter a name for the address (e.g Exchange)</source>
@@ -58,7 +58,7 @@
     </message>
     <message>
         <source>SAVE</source>
-        <translation>SICHERN</translation>
+        <translation>SPEICHERN</translation>
     </message>
     <message>
         <source>Edit label for the selected address:
@@ -99,7 +99,7 @@
     </message>
     <message>
         <source>Export the data in the current tab to a file</source>
-        <translation>Daten aus der aktuellen Ansicht in eine Datei exportieren</translation>
+        <translation>Daten aus dem aktuellen Tab in eine Datei exportieren</translation>
     </message>
     <message>
         <source>&amp;Export</source>
@@ -111,11 +111,11 @@
     </message>
     <message>
         <source>Choose the address to send coins to</source>
-        <translation>Wählen Sie die Adresse aus, an die Sie SFD überweisen möchten</translation>
+        <translation>Wählen Sie die Adresse aus, an die Sie Münzen senden wollen</translation>
     </message>
     <message>
         <source>Choose the address to receive coins with</source>
-        <translation>Wählen Sie die Adresse aus, über die Sie SFD empfangen wollen</translation>
+        <translation>Wählen Sie die Adresse aus, mit der Sie Münzen empfangen wollen</translation>
     </message>
     <message>
         <source>C&amp;hoose</source>
@@ -135,7 +135,7 @@
     </message>
     <message>
         <source>These are your SafeDeal addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</source>
-        <translation>Das sind Ihre SafeDeal-Adressen zum Empfangen von Zahlungen. Es wird empfohlen für jede Transaktion eine neue Empfangsadresse zu verwenden.</translation>
+        <translation>Das sind Ihre SafeDeal-Adressen zum Empfangen von Zahlungen. Es wird empfohlen, für jede Transaktion eine neue Empfangsadresse zu verwenden.</translation>
     </message>
     <message>
         <source>&amp;Copy Address</source>
@@ -147,7 +147,7 @@
     </message>
     <message>
         <source>&amp;Edit</source>
-        <translation>&amp;Editieren</translation>
+        <translation>&amp;Bearbeiten</translation>
     </message>
     <message>
         <source>Export Address List</source>
@@ -240,7 +240,7 @@
     </message>
     <message>
         <source>You can add a new one in the options menu to the side.</source>
-        <translation>Unter Menü "Optionen" auf der Seite können sie einen Neuen erfassen.</translation>
+        <translation>Unter Menü "Optionen" auf der Seite können Sie einen Neuen erfassen.</translation>
     </message>
     <message>
         <source>No contacts yet</source>
