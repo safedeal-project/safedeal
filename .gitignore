@@ -150,7 +150,6 @@ cache/*
 /nbproject/
 libbitcoinconsensus.pc
 .idea
-CMakeLists.txt
 cmake-build-debug
 
 moc_*
@@ -166,3 +165,6 @@ safedeald-new-gui.*
 
 .vscode/*
 src/univalue/configure~
+src/crc32c/CMakeLists.txt
+src/leveldb/CMakeLists.txt
+src/qt/CMakeLists.txt
