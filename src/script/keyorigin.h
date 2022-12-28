@@ -1,9 +1,11 @@
 // Copyright (c) 2019 The Bitcoin Core developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_SCRIPT_KEYORIGIN_H
-#define SafeDeal_SCRIPT_KEYORIGIN_H
+#ifndef PIVX_SCRIPT_KEYORIGIN_H
+#define PIVX_SCRIPT_KEYORIGIN_H
 
 #include <serialize.h>
 #include <vector>
@@ -52,4 +54,4 @@ struct KeyOriginInfo
     }
 };
 
-#endif // SafeDeal_SCRIPT_KEYORIGIN_H
+#endif // PIVX_SCRIPT_KEYORIGIN_H

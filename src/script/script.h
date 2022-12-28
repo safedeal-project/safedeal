@@ -1,8 +1,9 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2016-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2016-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -176,17 +177,12 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
-    // cold staking
-    OP_CHECKCOLDSTAKEVERIFY = 0xd1,
-
-    // template matching params
-    OP_SMALLINTEGER = 0xfa,
-    OP_PUBKEYS = 0xfb,
-    OP_PUBKEYHASH = 0xfd,
-    OP_PUBKEY = 0xfe,
-
     OP_INVALIDOPCODE = 0xff,
 };
+
+// Maximum value that an opcode can be
+static const unsigned int MAX_OPCODE = OP_NOP10;
+
 
 const char* GetOpName(opcodetype opcode);
 
@@ -623,7 +619,6 @@ public:
 
     bool IsNormalPaymentScript() const;
     bool IsPayToScriptHash() const;
-    bool IsPayToColdStaking() const;
     bool StartsWithOpcode(const opcodetype opcode) const;
 
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
@@ -648,6 +643,16 @@ public:
     }
 
     size_t DynamicMemoryUsage() const;
+};
+
+struct CScriptCheapHasher {
+    int operator()(const CScript& script) const {
+        int hash = script.size();
+        for(auto &i : script) {
+            hash ^= i + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
+        return hash;
+    }
 };
 
 #endif // BITCOIN_SCRIPT_SCRIPT_H

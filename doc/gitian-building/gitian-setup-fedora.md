@@ -60,10 +60,10 @@ git config --global user.email "MY_NAME@example.com"
 Fetching the Build Script
 --------------------------
 
-The build script we'll be using is contained in the SafeDeal github repository ([contrib/gitian-build.py](https://github.com/safedeal-project/safedeal/blob/master/contrib/gitian-build.py)). Since this is a completely fresh environment, we haven't yet cloned the SafeDeal repository and will need to fetch this script with the following commands:
+The build script we'll be using is contained in the PIVX github repository ([contrib/gitian-build.py](https://github.com/pivx-project/pivx/blob/master/contrib/gitian-build.py)). Since this is a completely fresh environment, we haven't yet cloned the PIVX repository and will need to fetch this script with the following commands:
 
 ```bash
-curl -L -O https://raw.githubusercontent.com/SafeDeal-Project/SafeDeal/master/contrib/gitian-build.py
+curl -L -O https://raw.githubusercontent.com/PIVX-Project/PIVX/master/contrib/gitian-build.py
 chmod +x gitian-build.py
 ```
 
@@ -77,7 +77,7 @@ Initial Gitian Setup
 Now that the script has been downloaded to your home directory, its time to run it in setup mode. This will perform the following actions:
 
 - Install the necessary system packages for gitian (namely Docker and it's related cli tools).
-- Clone the gitian-builder, gitian.sigs, safedeal-detached-sigs, and safedeal GitHub repos.
+- Clone the gitian-builder, gitian.sigs, pivx-detached-sigs, and pivx GitHub repos.
 - Configure proper user/group permissions for running gitian with Docker
 - Create a base Docker image.
 

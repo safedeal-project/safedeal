@@ -1,11 +1,13 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2016-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2016-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain.h"
+#include "masternode.h"
 #include "legacy/stakemodifier.h"  // for ComputeNextStakeModifier
 
 
@@ -14,6 +16,8 @@
  */
 void CChain::SetTip(CBlockIndex* pindex)
 {
+    LOCK(cs);
+
     if (pindex == NULL) {
         vChain.clear();
         return;
@@ -118,7 +122,7 @@ CBlockHeader CBlockIndex::GetBlockHeader() const
 
 int64_t CBlockIndex::MaxFutureBlockTime() const
 {
-    return GetAdjustedTime() + Params().GetConsensus().FutureBlockTimeDrift(nHeight+1);
+    return GetAdjustedTime() + Params().GetConsensus().FutureBlockTimeDrift(nHeight + 1);
 }
 
 int64_t CBlockIndex::MinPastBlockTime() const
@@ -130,8 +134,8 @@ int64_t CBlockIndex::MinPastBlockTime() const
 
     // on the transition from Time Protocol v1 to v2
     // pindexPrev->nTime might be in the future (up to the allowed drift)
-    // so we allow the nBlockTimeProtocolV2 to be at most (180-14) seconds earlier than previous block
-    if (nHeight + 1 == consensus.height_start_TimeProtoV2)
+    // so we allow the nBlockTimeProtocolV2 (PIVX v4.0) to be at most (180-14) seconds earlier than previous block
+    if (nHeight + 1 == consensus.vUpgrades[Consensus::UPGRADE_TIME_PROTOCOL_V2].nActivationHeight)
         return GetBlockTime() - consensus.FutureBlockTimeDrift(nHeight) + consensus.FutureBlockTimeDrift(nHeight + 1);
 
     // Time Protocol v2: pindexPrev->nTime
@@ -207,7 +211,7 @@ void CBlockIndex::SetStakeModifier(const uint256& nStakeModifier)
 void CBlockIndex::SetNewStakeModifier(const uint256& prevoutId)
 {
     // Shouldn't be called on V1 modifier's blocks (or before setting pprev)
-    if (nHeight < Params().GetConsensus().height_start_StakeModifierV2) return;
+    if (!Params().GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_STAKE_MODIFIER_V2)) return;
     if (!pprev) throw std::runtime_error(strprintf("%s : ERROR: null pprev", __func__));
 
     // Generate Hash(prevoutId | prevModifier) - switch with genesis modifier (0) on upgrade block
@@ -220,7 +224,7 @@ void CBlockIndex::SetNewStakeModifier(const uint256& prevoutId)
 // Returns V1 stake modifier (uint64_t)
 uint64_t CBlockIndex::GetStakeModifierV1() const
 {
-    if (vStakeModifier.empty() || nHeight >= Params().GetConsensus().height_start_StakeModifierV2)
+    if (vStakeModifier.empty() || Params().GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_STAKE_MODIFIER_V2))
         return 0;
     uint64_t nStakeModifier;
     std::memcpy(&nStakeModifier, vStakeModifier.data(), vStakeModifier.size());
@@ -230,11 +234,33 @@ uint64_t CBlockIndex::GetStakeModifierV1() const
 // Returns V2 stake modifier (uint256)
 uint256 CBlockIndex::GetStakeModifierV2() const
 {
-    if (vStakeModifier.empty() || nHeight < Params().GetConsensus().height_start_StakeModifierV2)
+    if (vStakeModifier.empty() || !Params().GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_STAKE_MODIFIER_V2))
         return UINT256_ZERO;
     uint256 nStakeModifier;
     std::memcpy(nStakeModifier.begin(), vStakeModifier.data(), vStakeModifier.size());
     return nStakeModifier;
+}
+
+bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex);
+
+CScript* CBlockIndex::GetPaidPayee()
+{
+    if(paidPayee == nullptr || paidPayee->empty()) {
+        CBlock block;
+        if (nHeight <= chainActive.Height() && ReadBlockFromDisk(block, this)) {
+            const auto& tx = block.vtx[block.IsProofOfWork() ? 0 : 1];
+            auto amount = CMasternode::GetMasternodePayment(nHeight);
+
+            for (const CTxOut& out : tx.vout) {
+                if (out.nValue == amount
+                ) {
+                    paidPayee = new CScript(out.scriptPubKey);
+                }
+            }
+        }
+    }
+
+    return paidPayee;
 }
 
 //! Check whether this block index entry is valid up to the passed validity level.
@@ -259,3 +285,6 @@ bool CBlockIndex::RaiseValidity(enum BlockStatus nUpTo)
     }
     return false;
 }
+
+
+

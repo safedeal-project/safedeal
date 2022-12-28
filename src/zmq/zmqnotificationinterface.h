@@ -1,4 +1,6 @@
 // Copyright (c) 2015 The Bitcoin Core developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -24,7 +26,7 @@ protected:
     void Shutdown();
 
     // CValidationInterface
-    void SyncTransaction(const CTransaction &tx, const CBlock *pblock);
+    void SyncTransaction(const CTransaction& tx, const CBlockIndex *pindex, int posInBlock);
     void UpdatedBlockTip(const CBlockIndex *pindex);
     void NotifyTransactionLock(const CTransaction &tx);
 

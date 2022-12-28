@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2013 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -52,7 +53,7 @@ QString dateTimeStr(const QDateTime& datetime);
 QString dateTimeStrWithSeconds(const QDateTime& date);
 QString dateTimeStr(qint64 nTime);
 
-// Render SafeDeal addresses in monospace font
+// Render SFD addresses in monospace font
 QFont bitcoinAddressFont();
 
 // Parse string into a CAmount value
@@ -94,7 +95,7 @@ void copyEntryData(QAbstractItemView* view, int column, int role = Qt::EditRole)
        @param[in] role    Data role to extract from the model
        @see  TransactionView::copyLabel, TransactionView::copyAmount, TransactionView::copyAddress
      */
-QString getEntryData(QAbstractItemView *view, int column, int role);
+QVariant getEntryData(QAbstractItemView *view, int column, int role);
 
 void setClipboard(const QString& str);
 

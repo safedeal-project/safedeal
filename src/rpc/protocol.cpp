@@ -1,8 +1,9 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2019 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2019 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -20,7 +21,7 @@
 
 
 /**
- * JSON-RPC protocol.  SafeDeal speaks version 1.0 for maximum compatibility,
+ * JSON-RPC protocol.  PIVX speaks version 1.0 for maximum compatibility,
  * but uses JSON-RPC 1.1/2.0 standards for parts of the 1.0 standard that were
  * unspecified (HTTP errors and contents of 'error').
  *
@@ -29,13 +30,13 @@
  * http://www.codeproject.com/KB/recipes/JSON_Spirit.aspx
  */
 
-std::string JSONRPCRequest(const std::string& strMethod, const UniValue& params, const UniValue& id)
+UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params, const UniValue& id)
 {
     UniValue request(UniValue::VOBJ);
     request.push_back(Pair("method", strMethod));
     request.push_back(Pair("params", params));
     request.push_back(Pair("id", id));
-    return request.write() + "\n";
+    return request;
 }
 
 UniValue JSONRPCReplyObj(const UniValue& result, const UniValue& error, const UniValue& id)
@@ -74,8 +75,7 @@ static const std::string COOKIEAUTH_FILE = ".cookie";
 fs::path GetAuthCookieFile()
 {
     fs::path path(GetArg("-rpccookiefile", COOKIEAUTH_FILE));
-    if (!path.is_complete()) path = GetDataDir() / path;
-    return path;
+    return AbsPathForConfigVal(path);
 }
 
 bool GenerateAuthCookie(std::string *cookie_out)

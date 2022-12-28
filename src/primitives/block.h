@@ -1,7 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2013 The Bitcoin developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -24,7 +25,7 @@ class CBlockHeader
 {
 public:
     // header
-    static const int32_t CURRENT_VERSION=7;    
+    static const int32_t CURRENT_VERSION = 7;
     int32_t nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
@@ -83,7 +84,6 @@ public:
     std::vector<unsigned char> vchBlockSig;
 
     // memory only
-    mutable CScript payee;
     mutable bool fChecked;
 
     CBlock()
@@ -112,7 +112,6 @@ public:
         CBlockHeader::SetNull();
         vtx.clear();
         fChecked = false;
-        payee = CScript();
         vchBlockSig.clear();
     }
 
@@ -136,11 +135,6 @@ public:
     bool IsProofOfWork() const
     {
         return !IsProofOfStake();
-    }
-
-    std::pair<COutPoint, unsigned int> GetProofOfStake() const
-    {
-        return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, nTime) : std::make_pair(COutPoint(), (unsigned int)0);
     }
 
     std::string ToString() const;

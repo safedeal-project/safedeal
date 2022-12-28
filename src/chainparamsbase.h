@@ -1,18 +1,20 @@
 // Copyright (c) 2014 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_CHAINPARAMSBASE_H
 #define BITCOIN_CHAINPARAMSBASE_H
 
+
 #include <string>
 #include <vector>
 
 /**
  * CBaseChainParams defines the base parameters (shared between safedeal-cli and safedeald)
- * of a given instance of the SafeDeal system.
+ * of a given instance of the safedeal system.
  */
 class CBaseChainParams
 {
@@ -41,6 +43,11 @@ protected:
  * outside of the unit tests.
  */
 const CBaseChainParams& BaseParams();
+
+/**
+ * Return parameters for the given network.
+ */
+CBaseChainParams& BaseParams(CBaseChainParams::Network network);
 
 /** Sets the params returned by Params() to those for the given network. */
 void SelectBaseParams(CBaseChainParams::Network network);

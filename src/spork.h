@@ -1,6 +1,7 @@
 // Copyright (c) 2014-2016 The Dash developers
-//Copyright (c) 2016-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2016-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -22,6 +23,7 @@
 
 class CSporkMessage;
 class CSporkManager;
+class CTxFilterManager;
 
 extern std::vector<CSporkDef> sporkDefs;
 extern std::map<uint256, CSporkMessage> mapSporks;
@@ -53,7 +55,7 @@ public:
         nTimeSigned(nTimeSigned)
     { }
 
-    uint256 GetHash() const { return HashQuark(BEGIN(nSporkID), END(nTimeSigned)); }
+    uint256 GetHash() const { return Hash(BEGIN(nSporkID), END(nTimeSigned)); }
 
     // override CSignedMessage functions
     uint256 GetSignatureHash() const override;
@@ -84,6 +86,18 @@ public:
     }
 };
 
+class CTxFilterManager
+{
+    public:
+    CTxFilterManager();
+    void InitTxFilter();
+    void BuildTxFilter();
+    std::map<std::string, int64_t> mapFilterAddress; // address, timestamp lock from
+    bool txFilterState;
+    int txFilterTarget;
+};
+
+
 
 class CSporkManager
 {
@@ -96,7 +110,7 @@ private:
 
 public:
     CSporkManager();
-
+    CTxFilterManager filter;
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
@@ -121,5 +135,8 @@ public:
     bool SetPrivKey(std::string strPrivKey);
     std::string ToString() const;
 };
+
+
+
 
 #endif

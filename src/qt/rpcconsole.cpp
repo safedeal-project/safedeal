@@ -1,7 +1,8 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -32,7 +33,6 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QScrollBar>
-#include <QSignalMapper>
 #include <QThread>
 #include <QTime>
 #include <QTimer>
@@ -224,9 +224,10 @@ void RPCExecutor::request(const QString& command)
         std::string strPrint;
         // Convert argument list to JSON objects in method-dependent way,
         // and pass it along with the method name to the dispatcher.
-        UniValue result = tableRPC.execute(
-            args[0],
-            RPCConvertValues(args[0], std::vector<std::string>(args.begin() + 1, args.end())));
+        JSONRPCRequest req;
+        req.params = RPCConvertValues(args[0], std::vector<std::string>(args.begin() + 1, args.end()));
+        req.strMethod = args[0];
+        UniValue result = tableRPC.execute(req);
 
         // Format result reply
         if (result.isNull())
@@ -300,7 +301,7 @@ RPCConsole::RPCConsole(QWidget* parent) : QDialog(parent, Qt::WindowSystemMenuHi
     }
 
     ui->berkeleyDBVersion->setText(DbEnv::version(0, 0, 0));
-    ui->wallet_path->setText(QString::fromStdString(GetDataDir().string() + QDir::separator().toLatin1() + GetArg("-wallet", "wallet.dat")));
+    ui->wallet_path->setText(QString::fromStdString(GetDataDir().string() + QDir::separator().toLatin1() + GetArg("-wallet", DEFAULT_WALLET_DAT)));
 #else
 
     ui->label_berkeleyDBVersion->hide();
@@ -423,19 +424,10 @@ void RPCConsole::setClientModel(ClientModel* model)
         peersTableContextMenu->addAction(banAction7d);
         peersTableContextMenu->addAction(banAction365d);
 
-        // Add a signal mapping to allow dynamic context menu arguments.
-        // We need to use int (instead of int64_t), because signal mapper only supports
-        // int or objects, which is okay because max bantime (1 year) is < int_max.
-        QSignalMapper* signalMapper = new QSignalMapper(this);
-        signalMapper->setMapping(banAction1h, 60*60);
-        signalMapper->setMapping(banAction24h, 60*60*24);
-        signalMapper->setMapping(banAction7d, 60*60*24*7);
-        signalMapper->setMapping(banAction365d, 60*60*24*365);
-        connect(banAction1h, &QAction::triggered, signalMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
-        connect(banAction24h, &QAction::triggered, signalMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
-        connect(banAction7d, &QAction::triggered, signalMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
-        connect(banAction365d, &QAction::triggered, signalMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
-        connect(signalMapper, static_cast<void (QSignalMapper::*)(int)>(&QSignalMapper::mapped), this, &RPCConsole::banSelectedNode);
+        connect(banAction1h, &QAction::triggered, [this] { banSelectedNode(60 * 60); });
+        connect(banAction24h, &QAction::triggered, [this] { banSelectedNode(60 * 60 * 24); });
+        connect(banAction7d, &QAction::triggered, [this] { banSelectedNode(60 * 60 * 24 * 7); });
+        connect(banAction365d, &QAction::triggered, [this] { banSelectedNode(60 * 60 * 24 * 365); });
 
         // peer table context menu signals
         connect(ui->peerWidget, &QTableView::customContextMenuRequested, this, &RPCConsole::showPeersTableContextMenu);
@@ -488,9 +480,12 @@ void RPCConsole::setClientModel(ClientModel* model)
         for (size_t i = 0; i < commandList.size(); ++i)
         {
             wordList << commandList[i].c_str();
+            wordList << ("help " + commandList[i]).c_str();
         }
 
+        wordList.sort();
         autoCompleter = new QCompleter(wordList, this);
+        autoCompleter->setModelSorting(QCompleter::CaseSensitivelySortedModel);
         ui->lineEdit->setCompleter(autoCompleter);
 
         // clear the lineEdit after activating from QCompleter
@@ -627,7 +622,7 @@ void RPCConsole::clear()
     QString clsKey = "Ctrl-L";
 #endif
 
-    message(CMD_REPLY, (tr("Welcome to the SafeDeal Coin RPC console.") + "<br>" +
+    message(CMD_REPLY, (tr("Welcome to the SFD RPC console.") + "<br>" +
                         tr("Use up and down arrows to navigate history, and %1 to clear screen.").arg("<b>"+clsKey+"</b>") + "<br>" +
                         tr("Type <b>help</b> for an overview of available commands.") +
                         "<br><span class=\"secwarning\"><br>" +
@@ -958,6 +953,7 @@ void RPCConsole::showEvent(QShowEvent* event)
 
     // start PeerTableModel auto refresh
     clientModel->getPeerTableModel()->startAutoRefresh();
+    clientModel->startMasternodesTimer();
 }
 
 void RPCConsole::hideEvent(QHideEvent* event)
@@ -969,6 +965,7 @@ void RPCConsole::hideEvent(QHideEvent* event)
 
     // stop PeerTableModel auto refresh
     clientModel->getPeerTableModel()->stopAutoRefresh();
+    clientModel->stopMasternodesTimer();
 }
 
 void RPCConsole::showBackups()
@@ -992,37 +989,34 @@ void RPCConsole::showBanTableContextMenu(const QPoint& point)
 
 void RPCConsole::disconnectSelectedNode()
 {
+    if(!g_connman)
+        return;
     // Get currently selected peer address
-    QString strNode = GUIUtil::getEntryData(ui->peerWidget, 0, PeerTableModel::Address);
+    NodeId id = GUIUtil::getEntryData(ui->peerWidget, 0, PeerTableModel::NetNodeId).toInt();
     // Find the node, disconnect it and clear the selected node
-    if (CNode *bannedNode = FindNode(strNode.toStdString())) {
-        bannedNode->CloseSocketDisconnect();
+    if(g_connman->DisconnectNode(id))
         clearSelectedNode();
-    }
 }
 
 void RPCConsole::banSelectedNode(int bantime)
 {
-    if (!clientModel)
+    if (!clientModel || !g_connman)
         return;
 
     // Get currently selected peer address
-    QString strNode = GUIUtil::getEntryData(ui->peerWidget, 0, PeerTableModel::Address);
+    QString strNode = GUIUtil::getEntryData(ui->peerWidget, 0, PeerTableModel::Address).toString();
     // Find possible nodes, ban it and clear the selected node
-    if (FindNode(strNode.toStdString())) {
-        std::string nStr = strNode.toStdString();
-        std::string addr;
-        int port = 0;
-        SplitHostPort(nStr, port, addr);
+    std::string nStr = strNode.toStdString();
+    std::string addr;
+    int port = 0;
+    SplitHostPort(nStr, port, addr);
 
-        CNetAddr resolved;
-        if (!LookupHost(addr.c_str(), resolved, false))
-            return;
-        CNode::Ban(resolved, BanReasonManuallyAdded, bantime);
-
-        clearSelectedNode();
-        clientModel->getBanTableModel()->refresh();
-    }
+    CNetAddr resolved;
+    if (!LookupHost(addr.c_str(), resolved, false))
+        return;
+    g_connman->Ban(resolved, BanReasonManuallyAdded, bantime);
+    clearSelectedNode();
+    clientModel->getBanTableModel()->refresh();
 }
 
 void RPCConsole::unbanSelectedNode()
@@ -1031,13 +1025,13 @@ void RPCConsole::unbanSelectedNode()
         return;
 
     // Get currently selected ban address
-    QString strNode = GUIUtil::getEntryData(ui->banlistWidget, 0, BanTableModel::Address);
+    QString strNode = GUIUtil::getEntryData(ui->banlistWidget, 0, BanTableModel::Address).toString();
     CSubNet possibleSubnet;
 
     LookupSubNet(strNode.toStdString().c_str(), possibleSubnet);
-    if (possibleSubnet.IsValid())
+    if (possibleSubnet.IsValid() && g_connman)
     {
-        CNode::Unban(possibleSubnet);
+        g_connman->Unban(possibleSubnet);
         clientModel->getBanTableModel()->refresh();
     }
 }
@@ -1059,3 +1053,4 @@ void RPCConsole::showOrHideBanTableIfRequired()
     ui->banlistWidget->setVisible(visible);
     ui->banHeading->setVisible(visible);
 }
+

@@ -22,7 +22,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string notr="true">SafeDeal Coin - Command-line options</string>
+   <string notr="true">SafeDeal - Command-line options</string>
   </property>
   <property name="styleSheet">
    <string notr="true">#HelpMessageDialog {

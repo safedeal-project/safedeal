@@ -1,16 +1,19 @@
 // Copyright (c) 2011-2013 The PPCoin developers
 // Copyright (c) 2013-2014 The NovaCoin Developers
 // Copyright (c) 2014-2018 The BlackCoin Developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_KERNEL_H
-#define SafeDeal_KERNEL_H
+#ifndef PIVX_KERNEL_H
+#define PIVX_KERNEL_H
 
 #include "main.h"
 #include "stakeinput.h"
+
+#define HASH_DRIFT 45
 
 class CStakeKernel {
 public:
@@ -76,4 +79,4 @@ bool CheckProofOfStake(const CBlock& block, std::string& strError, const CBlockI
  */
 bool GetStakeKernelHash(uint256& hashRet, const CBlock& block, const CBlockIndex* pindexPrev = nullptr);
 
-#endif // SafeDeal_KERNEL_H
+#endif // PIVX_KERNEL_H

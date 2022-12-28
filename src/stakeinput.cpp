@@ -1,5 +1,6 @@
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,9 +11,8 @@
 #include "txdb.h"
 #include "wallet/wallet.h"
 
-bool CSFDStake::InitFromTxIn(const CTxIn& txin)
+bool CPivStake::InitFromTxIn(const CTxIn& txin)
 {
-
     // Find the previous transaction in database
     uint256 hashBlock;
     CTransaction txPrev;
@@ -33,14 +33,14 @@ bool CSFDStake::InitFromTxIn(const CTxIn& txin)
     return true;
 }
 
-bool CSFDStake::SetPrevout(CTransaction txPrev, unsigned int n)
+bool CPivStake::SetPrevout(CTransaction txPrev, unsigned int n)
 {
     this->txFrom = txPrev;
     this->nPosition = n;
     return true;
 }
 
-bool CSFDStake::GetTxFrom(CTransaction& tx) const
+bool CPivStake::GetTxFrom(CTransaction& tx) const
 {
     if (txFrom.IsNull())
         return false;
@@ -48,7 +48,7 @@ bool CSFDStake::GetTxFrom(CTransaction& tx) const
     return true;
 }
 
-bool CSFDStake::GetTxOutFrom(CTxOut& out) const
+bool CPivStake::GetTxOutFrom(CTxOut& out) const
 {
     if (txFrom.IsNull() || nPosition >= txFrom.vout.size())
         return false;
@@ -56,18 +56,18 @@ bool CSFDStake::GetTxOutFrom(CTxOut& out) const
     return true;
 }
 
-bool CSFDStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut)
+bool CPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut)
 {
     txIn = CTxIn(txFrom.GetHash(), nPosition);
     return true;
 }
 
-CAmount CSFDStake::GetValue() const
+CAmount CPivStake::GetValue() const
 {
     return txFrom.vout[nPosition].nValue;
 }
 
-bool CSFDStake::CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmount nTotal)
+bool CPivStake::CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmount nTotal, const bool onlyP2PK)
 {
     std::vector<valtype> vSolutions;
     txnouttype whichType;
@@ -75,7 +75,7 @@ bool CSFDStake::CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmoun
     if (!Solver(scriptPubKeyKernel, whichType, vSolutions))
         return error("%s: failed to parse kernel", __func__);
 
-    if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH && whichType != TX_COLDSTAKE)
+    if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH)
         return error("%s: type=%d (%s) not supported for scriptPubKeyKernel", __func__, whichType, GetTxnOutputType(whichType));
 
     CScript scriptPubKey;
@@ -84,15 +84,14 @@ bool CSFDStake::CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmoun
         // if P2PKH check that we have the input private key
         if (!pwallet->GetKey(CKeyID(uint160(vSolutions[0])), key))
             return error("%s: Unable to get staking private key", __func__);
+    }
 
+    // Consensus check: P2PKH block signatures were not accepted before v5 update.
+    // This can be removed after v5.0 enforcement
+    if (whichType == TX_PUBKEYHASH && onlyP2PK) {
         // convert to P2PK inputs
         scriptPubKey << key.GetPubKey() << OP_CHECKSIG;
-
     } else {
-        // if P2CS, check that we have the coldstaking private key
-        if ( whichType == TX_COLDSTAKE && !pwallet->GetKey(CKeyID(uint160(vSolutions[0])), key) )
-            return error("%s: Unable to get cold staking private key", __func__);
-
         // keep the same script
         scriptPubKey = scriptPubKeyKernel;
     }
@@ -117,7 +116,7 @@ bool CSFDStake::CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmoun
     return true;
 }
 
-CDataStream CSFDStake::GetUniqueness() const
+CDataStream CPivStake::GetUniqueness() const
 {
     //The unique identifier for a SFD stake is the outpoint
     CDataStream ss(SER_NETWORK, 0);
@@ -126,7 +125,7 @@ CDataStream CSFDStake::GetUniqueness() const
 }
 
 //The block that the UTXO was added to the chain
-CBlockIndex* CSFDStake::GetIndexFrom()
+CBlockIndex* CPivStake::GetIndexFrom()
 {
     if (pindexFrom)
         return pindexFrom;
@@ -147,20 +146,22 @@ CBlockIndex* CSFDStake::GetIndexFrom()
 }
 
 // Verify stake contextual checks
-bool CSFDStake::ContextCheck(int nHeight, uint32_t nTime)
+bool CPivStake::ContextCheck(int nHeight, uint32_t nTime)
 {
     const Consensus::Params& consensus = Params().GetConsensus();
     // Get Stake input block time/height
     CBlockIndex* pindexFrom = GetIndexFrom();
     if (!pindexFrom)
-        return error("%s: unable to get previous index for stake input");
+        return error("%s: unable to get previous index for stake input", __func__);
     const int nHeightBlockFrom = pindexFrom->nHeight;
     const uint32_t nTimeBlockFrom = pindexFrom->nTime;
 
     // Check that the stake has the required depth/age
-    if (!consensus.HasStakeMinAgeOrDepth(nHeight, nTime, nHeightBlockFrom, nTimeBlockFrom))
+    if (!consensus.HasStakeMinAgeOrDepth(nHeight, nTime, nHeightBlockFrom, nTimeBlockFrom)) {
         return error("%s : min age violation - height=%d - time=%d, nHeightBlockFrom=%d, nTimeBlockFrom=%d",
                          __func__, nHeight, nTime, nHeightBlockFrom, nTimeBlockFrom);
+    }
+    
     // All good
     return true;
 }

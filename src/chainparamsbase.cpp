@@ -1,7 +1,8 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2016-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2016-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,14 +14,13 @@
 
 #include <boost/assign/list_of.hpp>
 
-
 /**
  * Main network
  */
 class CBaseMainParams : public CBaseChainParams
 {
 public:
-    CBaseMainParams()
+    CBaseMainParams() 
     {
         networkID = CBaseChainParams::MAIN;
         nRPCPort = 62584;
@@ -29,7 +29,7 @@ public:
 static CBaseMainParams mainParams;
 
 /**
- * Testnet (v3)
+ * Testnet (v1)
  */
 class CBaseTestNetParams : public CBaseMainParams
 {
@@ -37,8 +37,8 @@ public:
     CBaseTestNetParams()
     {
         networkID = CBaseChainParams::TESTNET;
-        nRPCPort = 51475;
-        strDataDir = "testnet4";
+        nRPCPort = 42973;
+        strDataDir = "testnet1";
     }
 };
 static CBaseTestNetParams testNetParams;
@@ -65,22 +65,24 @@ const CBaseChainParams& BaseParams()
     return *pCurrentBaseParams;
 }
 
-void SelectBaseParams(CBaseChainParams::Network network)
+CBaseChainParams& BaseParams(CBaseChainParams::Network network)
 {
     switch (network) {
     case CBaseChainParams::MAIN:
-        pCurrentBaseParams = &mainParams;
-        break;
+        return mainParams;
     case CBaseChainParams::TESTNET:
-        pCurrentBaseParams = &testNetParams;
-        break;
+        return testNetParams;
     case CBaseChainParams::REGTEST:
-        pCurrentBaseParams = &regTestParams;
-        break;
+        return regTestParams;
     default:
         assert(false && "Unimplemented network");
-        return;
+        return mainParams;
     }
+}
+
+void SelectBaseParams(CBaseChainParams::Network network)
+{
+    pCurrentBaseParams = &BaseParams(network);
 }
 
 CBaseChainParams::Network NetworkIdFromCommandLine()

@@ -1,7 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -59,8 +60,14 @@ public:
 
     size_t DynamicMemoryUsage() const { return 0; }
 
-    uint256 GetHash();
+    uint256 GetHash() const;
 
+};
+
+struct COutPointCheapHasher {
+    int operator()(const COutPoint& vout) const {
+        return ((int)vout.hash.GetCheapHash()) ^ vout.n;
+    }
 };
 
 /** An input of a transaction.  It contains the location of the previous
@@ -114,6 +121,16 @@ public:
     size_t DynamicMemoryUsage() const { return scriptSig.DynamicMemoryUsage(); }
 };
 
+struct CTxInCheapHasher {
+    int operator()(const CTxIn& txin) const {
+        return 
+            COutPointCheapHasher{}(txin.prevout) ^
+            CScriptCheapHasher{}(txin.scriptSig) ^
+            txin.nSequence ^
+            CScriptCheapHasher{}(txin.prevPubKey);
+    }
+};
+
 /** An output of a transaction.  It contains the public key that the next input
  * must be able to sign with to claim it.
  */
@@ -165,17 +182,26 @@ public:
     uint256 GetHash() const;
     bool GetKeyIDFromUTXO(CKeyID& keyIDRet) const;
 
+    CAmount GetDustThreshold(const CFeeRate &minRelayTxFee) const
+    {
+        // "Dust" is defined in terms of CTransaction::minRelayTxFee,
+        // which has units satoshis-per-kilobyte.
+        // If you'd pay more than 1/3 in fees
+        // to spend something, then we consider it dust.
+        // A typical spendable txout is 34 bytes big, and will
+        // need a CTxIn of at least 148 bytes to spend:
+        // so dust is a spendable txout less than 546 satoshis
+        // with default minRelayTxFee.
+        if (scriptPubKey.IsUnspendable())
+            return 0;
+
+        size_t nSize = GetSerializeSize(*this, SER_DISK, 0) + 148u;
+        return 3 * minRelayTxFee.GetFee(nSize);
+    }
+
     bool IsDust(CFeeRate minRelayTxFee) const
     {
-        // "Dust" is defined in terms of CTransaction::minRelayTxFee, which has units usfd-per-kilobyte.
-        // If you'd pay more than 1/3 in fees to spend something, then we consider it dust.
-        // A typical txout is 34 bytes big, and will need a CTxIn of at least 148 bytes to spend
-        // i.e. total is 148 + 32 = 182 bytes. Default -minrelaytxfee is 10000 usfd per kB
-        // and that means that fee per txout is 182 * 10000 / 1000 = 1820 usfd.
-        // So dust is a txout less than 1820 *3 = 5460 usfd
-        // with default -minrelaytxfee = minRelayTxFee = 10000 usfd per kB.
-        size_t nSize = GetSerializeSize(*this, SER_DISK, 0) + 148u;
-        return (nValue < 3*minRelayTxFee.GetFee(nSize));
+        return (nValue < GetDustThreshold(minRelayTxFee));
     }
 
     friend bool operator==(const CTxOut& a, const CTxOut& b)
@@ -260,18 +286,13 @@ public:
     // Compute modified tx size for priority calculation (optionally given tx size)
     unsigned int CalculateModifiedSize(unsigned int nTxSize=0) const;
 
-    bool UsesUTXO(const COutPoint out);
-    std::list<COutPoint> GetOutPoints() const;
-
     bool IsCoinBase() const
     {
         return (vin.size() == 1 && vin[0].prevout.IsNull());
     }
 
     bool IsCoinStake() const;
-    bool CheckColdStake(const CScript& script) const;
-    bool HasP2CSOutputs() const;
-
+    
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {
         return a.hash == b.hash;

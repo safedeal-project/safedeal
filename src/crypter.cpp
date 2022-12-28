@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2013 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -200,13 +201,16 @@ bool CCryptoKeyStore::GetPubKey(const CKeyID& address, CPubKey& vchPubKeyOut) co
     {
         LOCK(cs_KeyStore);
         if (!IsCrypted())
-            return CKeyStore::GetPubKey(address, vchPubKeyOut);
+            return CBasicKeyStore::GetPubKey(address, vchPubKeyOut);
 
         CryptedKeyMap::const_iterator mi = mapCryptedKeys.find(address);
         if (mi != mapCryptedKeys.end()) {
             vchPubKeyOut = (*mi).second.first;
             return true;
         }
+
+        // Check for watch-only pubkeys
+        return CBasicKeyStore::GetPubKey(address, vchPubKeyOut);
     }
     return false;
 }

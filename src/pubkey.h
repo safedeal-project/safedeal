@@ -1,11 +1,13 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2016-2018 The SafeDeal developers
+// Copyright (c) 2016-2018 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_PUBKEY_H
-#define SafeDeal_PUBKEY_H
+#ifndef PIVX_PUBKEY_H
+#define PIVX_PUBKEY_H
 
 #include "hash.h"
 #include "serialize.h"
@@ -22,6 +24,7 @@ class CKeyID : public uint160
 public:
     CKeyID() : uint160() {}
     explicit CKeyID(const uint160& in) : uint160(in) {}
+    explicit CKeyID(const std::string& str) : uint160(str) {}
 };
 
 typedef uint256 ChainCode;
@@ -33,10 +36,10 @@ public:
     /**
      * secp256k1:
      */
-    static const unsigned int PUBLIC_KEY_SIZE             = 65;
-    static const unsigned int COMPRESSED_PUBLIC_KEY_SIZE  = 33;
-    static const unsigned int SIGNATURE_SIZE              = 72;
-    static const unsigned int COMPACT_SIGNATURE_SIZE      = 65;
+    static constexpr unsigned int PUBLIC_KEY_SIZE             = 65;
+    static constexpr unsigned int COMPRESSED_PUBLIC_KEY_SIZE  = 33;
+    static constexpr unsigned int SIGNATURE_SIZE              = 72;
+    static constexpr unsigned int COMPACT_SIGNATURE_SIZE      = 65;
     /**
      * see www.keylength.com
      * script supports up to 75 for single byte push
@@ -69,6 +72,11 @@ private:
     }
 
 public:
+
+    bool static ValidSize(const std::vector<unsigned char> &vch) {
+      return vch.size() > 0 && GetLen(vch[0]) == vch.size();
+    }
+
     //! Construct an invalid public key.
     CPubKey()
     {
@@ -202,6 +210,16 @@ public:
 
 };
 
+struct CPubKeyCheapHasher {
+    int operator()(const CPubKey& pubKey) const {
+        int hash = pubKey.size();
+        for(auto &i : pubKey.Raw()) {
+            hash ^= i + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
+        return hash;
+    }
+};
+
 struct CExtPubKey {
     unsigned char nDepth;
     unsigned char vchFingerprint[4];
@@ -259,4 +277,4 @@ public:
     ~ECCVerifyHandle();
 };
 
-#endif // SafeDeal_PUBKEY_H
+#endif // PIVX_PUBKEY_H

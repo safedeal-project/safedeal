@@ -1,13 +1,14 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2018 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_BLOB_UINT256_H
-#define SafeDeal_BLOB_UINT256_H
+#ifndef PIVX_BLOB_UINT256_H
+#define PIVX_BLOB_UINT256_H
 
 #include <assert.h>
 #include <cstring>
@@ -79,6 +80,19 @@ public:
         return sizeof(data);
     }
 
+    uint64_t GetUint64(int pos) const
+    {
+        const uint8_t* ptr = data + pos * 8;
+        return ((uint64_t)ptr[0]) | \
+               ((uint64_t)ptr[1]) << 8 | \
+               ((uint64_t)ptr[2]) << 16 | \
+               ((uint64_t)ptr[3]) << 24 | \
+               ((uint64_t)ptr[4]) << 32 | \
+               ((uint64_t)ptr[5]) << 40 | \
+               ((uint64_t)ptr[6]) << 48 | \
+               ((uint64_t)ptr[7]) << 56;
+    }
+
     template<typename Stream>
     void Serialize(Stream& s) const
     {
@@ -90,6 +104,15 @@ public:
     {
         s.read((char*)data, sizeof(data));
     }
+};
+
+/** 88-bit opaque blob.
+ */
+class blob88 : public base_blob<88> {
+public:
+    blob88() {}
+    blob88(const base_blob<88>& b) : base_blob<88>(b) {}
+    explicit blob88(const std::vector<unsigned char>& vch) : base_blob<88>(vch) {}
 };
 
 /** 160-bit opaque blob.
@@ -127,10 +150,6 @@ public:
         return result;
     }
 
-    /** A more secure, salted hash function.
-     * @note This hash is not stable between little and big endian.
-     */
-    uint64_t GetHash(const blob_uint256& salt) const;
 };
 
 /* uint256 from const char *.
@@ -156,4 +175,4 @@ inline blob_uint256 blob_uint256S(const std::string& str)
 const blob_uint256 BLOB_UINT256_ZERO = blob_uint256();
 const blob_uint256 BLOB_UINT256_ONE = blob_uint256S("0000000000000000000000000000000000000000000000000000000000000001");
 
-#endif // SafeDeal_BLOB_UINT256_H
+#endif // PIVX_BLOB_UINT256_H

@@ -1,17 +1,18 @@
 // Copyright (c) 2012-2014 The Bitcoin developers
-//Copyright (c) 2017-2019 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2019 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "bloom.h"
 
 
-#include "chainparams.h"
 #include "hash.h"
 #include "primitives/transaction.h"
 #include "script/script.h"
 #include "script/standard.h"
+#include "random.h"
 #include "streams.h"
 
 #include <math.h>
@@ -23,22 +24,33 @@
 
 
 CBloomFilter::CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweakIn, unsigned char nFlagsIn) :
- /**
- * The ideal size for a bloom filter with a given number of elements and false positive rate is:
- * - nElements * log(fp rate) / ln(2)^2
- * We ignore filter parameters which will create a bloom filter larger than the protocol limits
- */
+    /**
+     * The ideal size for a bloom filter with a given number of elements and false positive rate is:
+     * - nElements * log(fp rate) / ln(2)^2
+     * We ignore filter parameters which will create a bloom filter larger than the protocol limits
+     */
     vData(std::min((unsigned int)(-1 / LN2SQUARED * nElements * log(nFPRate)), MAX_BLOOM_FILTER_SIZE * 8) / 8),
- /**
- * The ideal number of hash functions is filter size * ln(2) / number of elements
- * Again, we ignore filter parameters which will create a bloom filter with more hash functions than the protocol limits
- * See https://en.wikipedia.org/wiki/Bloom_filter for an explanation of these formulas
- */
+    /**
+     * The ideal number of hash functions is filter size * ln(2) / number of elements
+     * Again, we ignore filter parameters which will create a bloom filter with more hash functions than the protocol limits
+     * See https://en.wikipedia.org/wiki/Bloom_filter for an explanation of these formulas
+     */
     isFull(false),
     isEmpty(false),
-  nHashFuncs(std::min((unsigned int)(vData.size() * 8 / nElements * LN2), MAX_HASH_FUNCS)),
-  nTweak(nTweakIn),
-  nFlags(nFlagsIn)
+    nHashFuncs(std::min((unsigned int)(vData.size() * 8 / nElements * LN2), MAX_HASH_FUNCS)),
+    nTweak(nTweakIn),
+    nFlags(nFlagsIn)
+{
+}
+
+// Private constructor used by CRollingBloomFilter
+CBloomFilter::CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweakIn) :
+    vData((unsigned int)(-1 / LN2SQUARED * nElements * log(nFPRate)) / 8),
+    isFull(false),
+    isEmpty(true),
+    nHashFuncs((unsigned int)(vData.size() * 8 / nElements * LN2)),
+    nTweak(nTweakIn),
+    nFlags(BLOOM_UPDATE_NONE)
 {
 }
 
@@ -46,11 +58,6 @@ inline unsigned int CBloomFilter::Hash(unsigned int nHashNum, const std::vector<
 {
     // 0xFBA4C795 chosen as it guarantees a reasonable bit difference between nHashNum values.
     return MurmurHash3(nHashNum * 0xFBA4C795 + nTweak, vDataToHash) % (vData.size() * 8);
-}
-
-void CBloomFilter::setNotFull()
-{
-    isFull = false;
 }
 
 void CBloomFilter::insert(const std::vector<unsigned char>& vKey)
@@ -117,13 +124,19 @@ void CBloomFilter::clear()
     isEmpty = true;
 }
 
+void CBloomFilter::reset(unsigned int nNewTweak)
+{
+    clear();
+    nTweak = nNewTweak;
+}
+
 bool CBloomFilter::IsWithinSizeConstraints() const
 {
     return vData.size() <= MAX_BLOOM_FILTER_SIZE && nHashFuncs <= MAX_HASH_FUNCS;
 }
 
 /**
- * Returns true if this filter will match anything. See {@link org.safedealj.core.BloomFilter#setMatchAll()}
+ * Returns true if this filter will match anything. See {@link org.pivxj.core.BloomFilter#setMatchAll()}
  * for when this can be a useful thing to do.
  */
 bool CBloomFilter::MatchesAll() const {
@@ -231,4 +244,59 @@ void CBloomFilter::UpdateEmptyFull()
     }
     isFull = full;
     isEmpty = empty;
+}
+
+CRollingBloomFilter::CRollingBloomFilter(unsigned int nElements, double fpRate) :
+    b1(nElements * 2, fpRate, 0), b2(nElements * 2, fpRate, 0)
+{
+    // Implemented using two bloom filters of 2 * nElements each.
+    // We fill them up, and clear them, staggered, every nElements
+    // inserted, so at least one always contains the last nElements
+    // inserted.
+    nInsertions = 0;
+    nBloomSize = nElements * 2;
+
+    reset();
+}
+
+void CRollingBloomFilter::insert(const std::vector<unsigned char>& vKey)
+{
+    if (nInsertions == 0) {
+        b1.clear();
+    } else if (nInsertions == nBloomSize / 2) {
+        b2.clear();
+    }
+    b1.insert(vKey);
+    b2.insert(vKey);
+    if (++nInsertions == nBloomSize) {
+        nInsertions = 0;
+    }
+}
+
+void CRollingBloomFilter::insert(const uint256& hash)
+{
+    std::vector<unsigned char> data(hash.begin(), hash.end());
+    insert(data);
+}
+
+bool CRollingBloomFilter::contains(const std::vector<unsigned char>& vKey) const
+{
+    if (nInsertions < nBloomSize / 2) {
+        return b2.contains(vKey);
+    }
+    return b1.contains(vKey);
+}
+
+bool CRollingBloomFilter::contains(const uint256& hash) const
+{
+    std::vector<unsigned char> data(hash.begin(), hash.end());
+    return contains(data);
+}
+
+void CRollingBloomFilter::reset()
+{
+    unsigned int nNewTweak = GetRand(std::numeric_limits<unsigned int>::max());
+    b1.reset(nNewTweak);
+    b2.reset(nNewTweak);
+    nInsertions = 0;
 }

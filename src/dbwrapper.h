@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2014 The Bitcoin developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -48,7 +50,22 @@ class CDBBatch
 private:
     leveldb::WriteBatch batch;
 
+    CDataStream ssKey;
+    CDataStream ssValue;
+
+    size_t size_estimate;
+
 public:
+    /**
+     * @param[in] _parent   CDBWrapper that this batch is to be submitted to
+     */
+    CDBBatch() : ssKey(SER_DISK, CLIENT_VERSION), ssValue(SER_DISK, CLIENT_VERSION), size_estimate(0) { };
+
+    void Clear()
+    {
+        batch.Clear();
+        size_estimate = 0;
+    }
 
     template <typename K, typename V>
     void Write(const K& key, const V& value)
@@ -64,6 +81,17 @@ public:
         leveldb::Slice slValue(&ssValue[0], ssValue.size());
 
         batch.Put(slKey, slValue);
+
+        // LevelDB serializes writes as:
+        // - byte: header
+        // - varint: key length (1 byte up to 127B, 2 bytes up to 16383B, ...)
+        // - byte[]: key
+        // - varint: value length
+        // - byte[]: value
+        // The formula below assumes the key and value are both less than 16k.
+        size_estimate += 3 + (slKey.size() > 127) + slKey.size() + (slValue.size() > 127) + slValue.size();
+        ssKey.clear();
+        ssValue.clear();
     }
 
     template <typename K>
@@ -75,7 +103,17 @@ public:
         leveldb::Slice slKey(&ssKey[0], ssKey.size());
 
         batch.Delete(slKey);
+
+        // LevelDB serializes erases as:
+        // - byte: header
+        // - varint: key length
+        // - byte[]: key
+        // The formula below assumes the key is less than 16kB.
+        size_estimate += 2 + (slKey.size() > 127) + slKey.size();
+        ssKey.clear();
     }
+
+    size_t SizeEstimate() const { return size_estimate; }
 };
 
 class CDBIterator
@@ -254,6 +292,22 @@ public:
     * Return true if the database managed by this class contains no entries.
     */
     bool IsEmpty();
+
+    template<typename K>
+    size_t EstimateSize(const K& key_begin, const K& key_end) const
+    {
+        CDataStream ssKey1(SER_DISK, CLIENT_VERSION), ssKey2(SER_DISK, CLIENT_VERSION);
+        ssKey1.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
+        ssKey2.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
+        ssKey1 << key_begin;
+        ssKey2 << key_end;
+        leveldb::Slice slKey1(&ssKey1[0], ssKey1.size());
+        leveldb::Slice slKey2(&ssKey2[0], ssKey2.size());
+        uint64_t size = 0;
+        leveldb::Range range(slKey1, slKey2);
+        pdb->GetApproximateSizes(&range, 1, &size);
+        return size;
+    }
 
 };
 

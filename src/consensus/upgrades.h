@@ -1,11 +1,12 @@
 // Copyright (c) 2018 The Zcash developers
-//Copyright (c) 2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_CONSENSUS_UPGRADES_H
-#define SafeDeal_CONSENSUS_UPGRADES_H
+#ifndef PIVX_CONSENSUS_UPGRADES_H
+#define PIVX_CONSENSUS_UPGRADES_H
 
 #include "consensus/params.h"
 #include "optional.h"
@@ -82,4 +83,4 @@ Optional<int> NextActivationHeight(
         int nHeight,
         const Consensus::Params& params);
 
-#endif // SafeDeal_CONSENSUS_UPGRADES_H
+#endif // PIVX_CONSENSUS_UPGRADES_H

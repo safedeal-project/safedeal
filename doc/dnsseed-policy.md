@@ -1,7 +1,7 @@
 Expectations for DNS Seed operators
 ====================================
 
-SafeDeal attempts to minimize the level of trust in DNS seeds,
+SafeDeal Core attempts to minimize the level of trust in DNS seeds,
 but DNS seeds still pose a small amount of risk for the network.
 As such, DNS seeds must be run by entities which have some minimum
 level of trust within the SafeDeal community.
@@ -44,7 +44,7 @@ related to the DNS seed operation.
 If these expectations cannot be satisfied the operator should
 discontinue providing services and contact the active SafeDeal
 Core development team as well as posting on the
-[SafeDeal Forum](https://forum.safedeal.trade).
+[SafeDeal Discord](https://discord.gg/kKwrqGcf).
 
 Behavior outside of these expectations may be reasonable in some
 situations but should be discussed in public in advance.

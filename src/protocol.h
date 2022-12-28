@@ -1,8 +1,9 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2016-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2016-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -32,11 +33,13 @@
 class CMessageHeader
 {
 public:
-    CMessageHeader();
-    CMessageHeader(const char* pszCommand, unsigned int nMessageSizeIn);
+    typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
+
+    CMessageHeader(const MessageStartChars& pchMessageStartIn);
+    CMessageHeader(const MessageStartChars& pchMessageStartIn, const char* pszCommand, unsigned int nMessageSizeIn);
 
     std::string GetCommand() const;
-    bool IsValid() const;
+    bool IsValid(const MessageStartChars& messageStart) const;
 
     ADD_SERIALIZE_METHODS;
 
@@ -46,15 +49,15 @@ public:
         READWRITE(FLATDATA(pchMessageStart));
         READWRITE(FLATDATA(pchCommand));
         READWRITE(nMessageSize);
-        READWRITE(nChecksum);
+        READWRITE(FLATDATA(pchChecksum));
     }
 
     // TODO: make private (improves encapsulation)
 public:
     enum {
         COMMAND_SIZE = 12,
-        MESSAGE_SIZE_SIZE = sizeof(int),
-        CHECKSUM_SIZE = sizeof(int),
+        MESSAGE_SIZE_SIZE = 4,
+        CHECKSUM_SIZE = 4,
 
         MESSAGE_SIZE_OFFSET = MESSAGE_START_SIZE + COMMAND_SIZE,
         CHECKSUM_OFFSET = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE,
@@ -62,8 +65,8 @@ public:
     };
     char pchMessageStart[MESSAGE_START_SIZE];
     char pchCommand[COMMAND_SIZE];
-    unsigned int nMessageSize;
-    unsigned int nChecksum;
+    uint32_t nMessageSize;
+    uint8_t pchChecksum[CHECKSUM_SIZE];
 };
 
 /**
@@ -220,15 +223,6 @@ extern const char* REJECT;
  */
 extern const char* SENDHEADERS;
 /**
- * The ix message transmits a single SwiftX transaction
- */
-extern const char* IX;
-/**
- * The ixlockvote message is used to reach consensus for SwiftX
- * transaction locks
- */
-extern const char* IXLOCKVOTE;
-/**
  * The spork message is used to send spork values to connected
  * peers
  */
@@ -381,24 +375,24 @@ public:
 };
 
 enum {
-    MSG_TX = 1,
-    MSG_BLOCK,
+    MSG_TX                          = 1,
+    MSG_BLOCK                       = 2,
     // Nodes may always request a MSG_FILTERED_BLOCK in a getdata, however,
     // MSG_FILTERED_BLOCK should not appear in any invs except as a part of getdata.
-    MSG_FILTERED_BLOCK,
-    MSG_TXLOCK_REQUEST,
-    MSG_TXLOCK_VOTE,
-    MSG_SPORK,
-    MSG_MASTERNODE_WINNER,
-    MSG_MASTERNODE_SCANNING_ERROR,
-    MSG_BUDGET_VOTE,
-    MSG_BUDGET_PROPOSAL,
-    MSG_BUDGET_FINALIZED,
-    MSG_BUDGET_FINALIZED_VOTE,
-    MSG_MASTERNODE_QUORUM,
-    MSG_MASTERNODE_ANNOUNCE,
-    MSG_MASTERNODE_PING,
-    MSG_DSTX
+    MSG_FILTERED_BLOCK              = 3,
+    // MSG_TXLOCK_REQUEST              = 4,
+    // MSG_TXLOCK_VOTE                 = 5,
+    MSG_SPORK                       = 6,
+    MSG_MASTERNODE_WINNER           = 7,
+    MSG_MASTERNODE_SCANNING_ERROR   = 8,
+    MSG_BUDGET_VOTE                 = 9,
+    MSG_BUDGET_PROPOSAL             = 10,
+    MSG_BUDGET_FINALIZED            = 11,
+    MSG_BUDGET_FINALIZED_VOTE       = 12,
+    MSG_MASTERNODE_QUORUM           = 13,
+    MSG_MASTERNODE_ANNOUNCE         = 14,
+    MSG_MASTERNODE_PING             = 15,
+    MSG_DSTX                        = 16,
 };
 
 #endif // BITCOIN_PROTOCOL_H

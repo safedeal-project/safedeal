@@ -28,9 +28,9 @@ Build-Depends: debhelper,
  libzmq3-dev,
  dh-systemd
 Standards-Version: 3.9.2
-Homepage: http://www.safedeal.trade
-Vcs-Git: git://github.com/SafeDeal-Project/SafeDeal.git
-Vcs-Browser: http://github.com/SafeDeal-Project/SafeDeal
+Homepage: https://safedeal.trade
+Vcs-Git: git://github.com/safedeal-project/safedeal.git
+Vcs-Browser: https://github.com/safedeal-project/safedeal
 
 Package: safedeald
 Architecture: any

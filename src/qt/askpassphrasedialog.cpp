@@ -1,7 +1,8 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,10 +13,10 @@
 #include "guiconstants.h"
 #include "guiutil.h"
 #include "walletmodel.h"
-#include "qt/safedeal/qtutils.h"
-#include "qt/safedeal/loadingdialog.h"
-#include "qt/safedeal/defaultdialog.h"
-#include "qt/safedeal/safedealgui.h"
+#include "qt/pivx/qtutils.h"
+#include "qt/pivx/loadingdialog.h"
+#include "qt/pivx/defaultdialog.h"
+#include "qt/pivx/pivxgui.h"
 #include <QDebug>
 
 #include <QKeyEvent>
@@ -191,7 +192,7 @@ void AskPassphraseDialog::accept()
         );
         if (ret) {
             newpassCache = newpass1;
-            SafeDealGUI* window = static_cast<SafeDealGUI*>(parentWidget());
+            PIVXGUI* window = static_cast<PIVXGUI*>(parentWidget());
             LoadingDialog *dialog = new LoadingDialog(window);
             dialog->execute(this, 1);
             openDialogWithOpaqueBackgroundFullScreen(dialog, window);
@@ -311,7 +312,7 @@ bool AskPassphraseDialog::eventFilter(QObject* object, QEvent* event)
 
 bool AskPassphraseDialog::openStandardDialog(QString title, QString body, QString okBtn, QString cancelBtn)
 {
-    SafeDealGUI* gui = static_cast<SafeDealGUI*>(parentWidget());
+    PIVXGUI* gui = static_cast<PIVXGUI*>(parentWidget());
     DefaultDialog *confirmDialog = new DefaultDialog(gui);
     confirmDialog->setText(title, body, okBtn, cancelBtn);
     confirmDialog->adjustSize();
@@ -344,11 +345,11 @@ void AskPassphraseDialog::updateWarningsLabel()
 void AskPassphraseDialog::warningMessage()
 {
     hide();
-    static_cast<SafeDealGUI*>(parentWidget())->showHide(true);
+    static_cast<PIVXGUI*>(parentWidget())->showHide(true);
     openStandardDialog(
             tr("Wallet encrypted"),
             "<qt>" +
-            tr("SafeDeal Coin will close now to finish the encryption process. "
+            tr("SafeDeal will close now to finish the encryption process. "
                "Remember that encrypting your wallet cannot fully protect "
                "your SFDs from being stolen by malware infecting your computer.") +
             "<br><br><b>" +

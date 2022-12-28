@@ -1,10 +1,12 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifdef HAVE_CONFIG_H
-#include "config/safedeal-config.h"
+#include "config/pivx-config.h"
 #endif
 
 #include "netaddress.h"
@@ -197,8 +199,8 @@ bool CNetAddr::IsValid() const
         return false;
 
     // unspecified IPv6 address (::/128)
-    unsigned char ipNone[16] = {};
-    if (memcmp(ip, ipNone, 16) == 0)
+    unsigned char ipNone6[16] = {};
+    if (memcmp(ip, ipNone6, 16) == 0)
         return false;
 
     // documentation IPv6 address

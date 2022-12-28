@@ -1,7 +1,8 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -43,14 +44,14 @@
 
 
 const int BITCOIN_IPC_CONNECT_TIMEOUT = 1000; // milliseconds
-const QString BITCOIN_IPC_PREFIX("safedeal:");
+const QString BITCOIN_IPC_PREFIX("pivx:");
 // BIP70 payment protocol messages
 const char* BIP70_MESSAGE_PAYMENTACK = "PaymentACK";
 const char* BIP70_MESSAGE_PAYMENTREQUEST = "PaymentRequest";
 // BIP71 payment protocol media types
-const char* BIP71_MIMETYPE_PAYMENT = "application/safedeal-payment";
-const char* BIP71_MIMETYPE_PAYMENTACK = "application/safedeal-paymentack";
-const char* BIP71_MIMETYPE_PAYMENTREQUEST = "application/safedeal-paymentrequest";
+const char* BIP71_MIMETYPE_PAYMENT = "application/pivx-payment";
+const char* BIP71_MIMETYPE_PAYMENTACK = "application/pivx-paymentack";
+const char* BIP71_MIMETYPE_PAYMENTREQUEST = "application/pivx-paymentrequest";
 // BIP70 max payment request size in bytes (DoS protection)
 const qint64 BIP70_MAX_PAYMENTREQUEST_SIZE = 50000;
 
@@ -77,7 +78,7 @@ namespace // Anon namespace
 //
 static QString ipcServerName()
 {
-    QString name("SafeDeal CoinQt");
+    QString name("SafeDealQt");
 
     // Append a simple hash of the datadir
     // Note that GetDataDir(true) returns a different path
@@ -194,11 +195,9 @@ void PaymentServer::ipcParseCommandLine(int argc, char* argv[])
 
             SendCoinsRecipient r;
             if (GUIUtil::parseBitcoinURI(arg, &r) && !r.address.isEmpty()) {
-                CBitcoinAddress address(r.address.toStdString());
-
-                if (address.IsValid(Params(CBaseChainParams::MAIN))) {
+                if (IsValidDestinationString(r.address.toStdString(), Params(CBaseChainParams::MAIN))) {
                     SelectParams(CBaseChainParams::MAIN);
-                } else if (address.IsValid(Params(CBaseChainParams::TESTNET))) {
+                } else if (IsValidDestinationString(r.address.toStdString(), Params(CBaseChainParams::TESTNET))) {
                     SelectParams(CBaseChainParams::TESTNET);
                 }
             }
@@ -386,15 +385,14 @@ void PaymentServer::handleURIOrFile(const QString& s)
         {
             SendCoinsRecipient recipient;
             if (GUIUtil::parseBitcoinURI(s, &recipient)) {
-                CBitcoinAddress address(recipient.address.toStdString());
-                if (!address.IsValid()) {
+                if (!IsValidDestinationString(recipient.address.toStdString(), Params())) {
                     Q_EMIT message(tr("URI handling"), tr("Invalid payment address %1").arg(recipient.address),
                         CClientUIInterface::MSG_ERROR);
                 } else
                     Q_EMIT receivedPaymentRequest(recipient);
             } else
                 Q_EMIT message(tr("URI handling"),
-                    tr("URI cannot be parsed! This can be caused by an invalid SafeDeal Coin address or malformed URI parameters."),
+                    tr("URI cannot be parsed! This can be caused by an invalid SFD address or malformed URI parameters."),
                     CClientUIInterface::ICON_WARNING);
 
             return;
@@ -506,9 +504,9 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins
         CTxDestination dest;
         if (ExtractDestination(sendingTo.first, dest)) {
             // Append destination address
-            addresses.append(QString::fromStdString(CBitcoinAddress(dest).ToString()));
+            addresses.append(QString::fromStdString(EncodeDestination(dest)));
         } else if (!recipient.authenticatedMerchant.isEmpty()) {
-            // Insecure payments to custom safedeal addresses are not supported
+            // Insecure payments to custom SFD addresses are not supported
             // (there is no good way to tell the user where they are paying in a way
             // they'd have a chance of understanding).
             Q_EMIT message(tr("Payment request rejected"),
@@ -568,27 +566,18 @@ void PaymentServer::fetchPaymentACK(CWallet* wallet, SendCoinsRecipient recipien
     payment.add_transactions(transaction.data(), transaction.size());
 
     // Create a new refund address, or re-use:
-    QString account = tr("Refund from %1").arg(recipient.authenticatedMerchant);
-    std::string strAccount = account.toStdString();
-    std::set<CTxDestination> refundAddresses = wallet->GetAccountAddresses(strAccount);
-    if (!refundAddresses.empty()) {
-        CScript s = GetScriptForDestination(*refundAddresses.begin());
+    CPubKey newKey;
+    if (wallet->GetKeyFromPool(newKey)) {
+        CKeyID keyID = newKey.GetID();
+        std::string label = tr("Refund from %1").arg(recipient.authenticatedMerchant).toStdString();
+        wallet->SetAddressBook(keyID, label, "refund");
+        CScript s = GetScriptForDestination(keyID);
         payments::Output* refund_to = payment.add_refund_to();
         refund_to->set_script(&s[0], s.size());
     } else {
-        CPubKey newKey;
-        if (wallet->GetKeyFromPool(newKey)) {
-            CKeyID keyID = newKey.GetID();
-            wallet->SetAddressBook(keyID, strAccount, "refund");
-
-            CScript s = GetScriptForDestination(keyID);
-            payments::Output* refund_to = payment.add_refund_to();
-            refund_to->set_script(&s[0], s.size());
-        } else {
-            // This should never happen, because sending coins should have
-            // just unlocked the wallet and refilled the keypool.
-            qWarning() << "PaymentServer::fetchPaymentACK : Error getting refund key, refund_to not set";
-        }
+        // This should never happen, because sending coins should have
+        // just unlocked the wallet and refilled the keypool.
+        qWarning() << "PaymentServer::fetchPaymentACK : Error getting refund key, refund_to not set";
     }
 
     int length = payment.ByteSize();

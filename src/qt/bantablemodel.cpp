@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2015 The Bitcoin Core developers
-//Copyright (c) 2018-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2018-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -52,7 +53,8 @@ public:
     void refreshBanlist()
     {
         banmap_t banMap;
-        CNode::GetBanned(banMap);
+        if(g_connman)
+            g_connman->GetBanned(banMap);
 
         cachedBanlist.clear();
         cachedBanlist.reserve(banMap.size());
@@ -150,7 +152,7 @@ QVariant BanTableModel::headerData(int section, Qt::Orientation orientation, int
 Qt::ItemFlags BanTableModel::flags(const QModelIndex &index) const
 {
     if(!index.isValid())
-        return 0;
+        return Qt::NoItemFlags;
 
     Qt::ItemFlags retval = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
     return retval;

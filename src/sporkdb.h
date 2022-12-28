@@ -1,10 +1,11 @@
-//Copyright (c) 2017-2019 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2019 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_CSPORKDB_H
-#define SafeDeal_CSPORKDB_H
+#ifndef PIVX_CSPORKDB_H
+#define PIVX_CSPORKDB_H
 
 #include "fs.h"
 #include "dbwrapper.h"
@@ -26,4 +27,4 @@ public:
 };
 
 
-#endif //SafeDeal_CSPORKDB_H
+#endif //PIVX_CSPORKDB_H

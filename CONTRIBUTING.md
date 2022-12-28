@@ -1,7 +1,7 @@
-Contributing to SafeDeal
+Contributing to SafeDeal Core
 ============================
 
-The SafeDeal project operates an open contributor model where anyone is
+The SafeDeal Core project operates an open contributor model where anyone is
 welcome to contribute towards development in the form of peer review, testing
 and patches. This document explains the practical process and guidelines for
 contributing.
@@ -64,7 +64,7 @@ the pull request affects. Valid areas as:
   - *Net* or *P2P* for changes to the peer-to-peer network code
   - *RPC/REST* for changes to the RPC or REST APIs
   - *Scripts and tools* for changes to the scripts and tools
-  - *Tests* for changes to the safedeal unit tests or QA tests
+  - *Tests* for changes to the SafeDeal Coreunit tests or QA tests
   - *Trivial* should **only** be used for PRs that do not change generated
     executable code. Notably, refactors (change of function arguments and code
     reorganization) and changes in behavior should **not** be marked as trivial.
@@ -84,7 +84,7 @@ Examples:
     Trivial: Fix typo in init.cpp
 
 Note that translations should not be submitted as pull requests, please see
-[Translation Process](https://github.com/safedeal-project/safedeal/blob/master/doc/translation_process.md)
+[Translation Process](https://github.com/pivx-project/pivx/blob/master/doc/translation_process.md)
 for more information on helping with translations.
 
 If a pull request is not to be considered for merging (yet), please
@@ -203,10 +203,10 @@ workload on reviewing.
 "Decision Making" Process
 -------------------------
 
-The following applies to code changes to the SafeDeal project, and is not to be
+The following applies to code changes to the SafeDeal Core project, and is not to be
 confused with overall SafeDeal Network Protocol consensus changes.
 
-Whether a pull request is merged into SafeDeal rests with the project merge
+Whether a pull request is merged into SafeDeal Core rests with the project merge
 maintainers and ultimately the project lead.
 
 Maintainers will take into consideration if a patch is in line with the general
@@ -303,7 +303,7 @@ about:
 Release Policy
 --------------
 
-The project leader is the release manager for each SafeDeal release.
+The project leader is the release manager for each SafeDeal Core release.
 
 Copyright
 ---------

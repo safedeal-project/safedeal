@@ -1,6 +1,7 @@
 // Copyright (c) 2012-2014 The Bitcoin developers
-//Copyright (c) 2017-2019 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2019 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -54,6 +55,10 @@ private:
 
     unsigned int Hash(unsigned int nHashNum, const std::vector<unsigned char>& vDataToHash) const;
 
+    // Private constructor for CRollingBloomFilter, no restrictions on size
+    CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweak);
+    friend class CRollingBloomFilter;
+
 public:
     /**
      * Creates a new bloom filter which will provide the given fp rate when filled with the given number of elements
@@ -78,7 +83,6 @@ public:
         READWRITE(nFlags);
     }
 
-    void setNotFull();
 
     void insert(const std::vector<unsigned char>& vKey);
     void insert(const COutPoint& outpoint);
@@ -89,6 +93,7 @@ public:
     bool contains(const uint256& hash) const;
 
     void clear();
+    void reset(unsigned int nNewTweak);
 
     //! True if the size is <= MAX_BLOOM_FILTER_SIZE and the number of hash functions is <= MAX_HASH_FUNCS
     //! (catch a filter which was just deserialized which was too big)
@@ -103,5 +108,38 @@ public:
     //! Checks for empty and full filters to avoid wasting cpu
     void UpdateEmptyFull();
 };
+
+/**
+ * RollingBloomFilter is a probabilistic "keep track of most recently inserted" set.
+ * Construct it with the number of items to keep track of, and a false-positive
+ * rate. Unlike CBloomFilter, by default nTweak is set to a cryptographically
+ * secure random value for you. Similarly rather than clear() the method
+ * reset() is provided, which also changes nTweak to decrease the impact of
+ * false-positives.
+ *
+ * contains(item) will always return true if item was one of the last N things
+ * insert()'ed ... but may also return true for items that were not inserted.
+ */
+class CRollingBloomFilter
+{
+public:
+    // A random bloom filter calls GetRand() at creation time.
+    // Don't create global CRollingBloomFilter objects, as they may be
+    // constructed before the randomizer is properly initialized.
+    CRollingBloomFilter(unsigned int nElements, double nFPRate);
+
+    void insert(const std::vector<unsigned char>& vKey);
+    void insert(const uint256& hash);
+    bool contains(const std::vector<unsigned char>& vKey) const;
+    bool contains(const uint256& hash) const;
+
+    void reset();
+
+private:
+    unsigned int nBloomSize;
+    unsigned int nInsertions;
+    CBloomFilter b1, b2;
+};
+
 
 #endif // BITCOIN_BLOOM_H

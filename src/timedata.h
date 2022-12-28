@@ -1,6 +1,7 @@
 // Copyright (c) 2014 The Bitcoin developers
-//Copyright (c) 2019-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2019-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,6 +12,13 @@
 #include <assert.h>
 #include <stdint.h>
 #include <vector>
+
+static const int MINUTE_IN_SECONDS = 60;
+static const int HOUR_IN_SECONDS = 60 * MINUTE_IN_SECONDS;
+static const int DAY_IN_SECONDS = 24 * HOUR_IN_SECONDS;
+static const int WEEK_IN_SECONDS = 7 * DAY_IN_SECONDS;
+static const int MONTH_IN_SECONDS = 30 * DAY_IN_SECONDS; // Average length of a month
+static const int YEAR_IN_SECONDS = 31556952; // Average length of year in Gregorian calendar
 
 class CNetAddr;
 
@@ -79,5 +87,6 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime, int nOffsetLimit);
 // Time Protocol V2
 int64_t GetTimeSlot(const int64_t nTime);
 int64_t GetCurrentTimeSlot();
+int64_t GetNextTimeSlot();
 
 #endif // BITCOIN_TIMEDATA_H

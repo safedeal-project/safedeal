@@ -1,13 +1,14 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include "config/safedeal-config.h"
+#include "config/pivx-config.h"
 #endif
 
 #include "util.h"
@@ -21,6 +22,8 @@
 
 #include <stdarg.h>
 #include <thread>
+#include <sstream>
+#include <iomanip>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -84,21 +87,24 @@
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 
+const char * const PIVX_CONF_FILENAME = "safedeal.conf";
+const char * const PIVX_PID_FILENAME = "safedeal.pid";
+const char * const PIVX_MASTERNODE_CONF_FILENAME = "masternode.conf";
+const char * const PIVX_ACTIVE_MASTERNODE_CONF_FILENAME = "activemasternode.conf";
+
 
 // SafeDeal only features
 // Masternode
 bool fMasterNode = false;
-std::string strMasterNodePrivKey = "";
-std::string strMasterNodeAddr = "";
+bool fStaking = false;
+bool fStakingActive = false;
+bool fStakingStatus = false;
+bool fPrivacyMode = false;
 bool fLiteMode = false;
-// SwiftX
-bool fEnableSwiftTX = true;
-int nSwiftTXDepth = 5;
 
 /** Spork enforcement enabled time */
 int64_t enforceMasternodePaymentsTime = 4085657524;
 bool fSucessfullyLoaded = false;
-std::string strBudgetMode = "";
 
 std::map<std::string, std::string> mapArgs;
 std::map<std::string, std::vector<std::string> > mapMultiArgs;
@@ -285,10 +291,10 @@ void PrintExceptionContinue(const std::exception* pex, const char* pszThread)
 
 fs::path GetDefaultDataDir()
 {
-// Windows < Vista: C:\Documents and Settings\Username\Application Data\SafeDeal
-// Windows >= Vista: C:\Users\Username\AppData\Roaming\SafeDeal
-// Mac: ~/Library/Application Support/SafeDeal
-// Unix: ~/.safedeal
+// Windows < Vista: C:\Documents and Settings\Username\Application Data\SFDCoin
+// Windows >= Vista: C:\Users\Username\AppData\Roaming\SFDCoin
+// Mac: ~/Library/Application Support/SFDCoin
+// Unix: ~/.sfdcoin
 #ifdef WIN32
     // Windows
     return GetSpecialFolderPath(CSIDL_APPDATA) / "SFDCoin";
@@ -351,18 +357,20 @@ void ClearDatadirCache()
 
 fs::path GetConfigFile()
 {
-    fs::path pathConfigFile(GetArg("-conf", "safedeal.conf"));
-    if (!pathConfigFile.is_complete())
-        pathConfigFile = GetDataDir(false) / pathConfigFile;
-
-    return pathConfigFile;
+    fs::path pathConfigFile(GetArg("-conf", PIVX_CONF_FILENAME));
+    return AbsPathForConfigVal(pathConfigFile, false);
 }
 
 fs::path GetMasternodeConfigFile()
 {
-    fs::path pathConfigFile(GetArg("-mnconf", "masternode.conf"));
-    if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir() / pathConfigFile;
-    return pathConfigFile;
+    fs::path pathConfigFile(GetArg("-mnconf", PIVX_MASTERNODE_CONF_FILENAME));
+    return AbsPathForConfigVal(pathConfigFile);
+}
+
+fs::path GetActiveMasternodeConfigFile()
+{
+    fs::path pathConfigFile(GetArg("-activemnconf", PIVX_ACTIVE_MASTERNODE_CONF_FILENAME));
+    return AbsPathForConfigVal(pathConfigFile);
 }
 
 void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
@@ -373,16 +381,8 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
         // Create empty safedeal.conf if it does not exist
         FILE* configFile = fsbridge::fopen(GetConfigFile(), "a");
         if (configFile != NULL)
-        {
-            std::string strHeader = "addnode=194.32.79.108\n"
-                                    "addnode=45.153.185.44\n"
-                                    "addnode=93.115.23.197\n"
-                                    "addnode=194.32.76.205\n"
-                                    "addnode=95.111.238.208\n";
-            fwrite(strHeader.c_str(), std::strlen(strHeader.c_str()), 1, configFile);
             fclose(configFile);
-            streamConfig.open(GetConfigFile());
-        }
+        return; // Nothing to read, so just return
     }
 
     std::set<std::string> setOptions;
@@ -412,9 +412,8 @@ fs::path AbsPathForConfigVal(const fs::path& path, bool net_specific)
 #ifndef WIN32
 fs::path GetPidFile()
 {
-    fs::path pathPidFile(GetArg("-pid", "safedeald.pid"));
-    if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
-    return pathPidFile;
+    fs::path pathPidFile(GetArg("-pid", PIVX_PID_FILENAME));
+    return AbsPathForConfigVal(pathPidFile);
 }
 
 void CreatePidFile(const fs::path& path, pid_t pid)
@@ -569,25 +568,7 @@ fs::path GetSpecialFolderPath(int nFolder, bool fCreate)
 
 fs::path GetTempPath()
 {
-#if BOOST_FILESYSTEM_VERSION == 3
     return fs::temp_directory_path();
-#else
-    // TODO: remove when we don't support filesystem v2 anymore
-    fs::path path;
-#ifdef WIN32
-    char pszPath[MAX_PATH] = "";
-
-    if (GetTempPathA(MAX_PATH, pszPath))
-        path = fs::path(pszPath);
-#else
-    path = fs::path("/tmp");
-#endif
-    if (path.empty() || !fs::is_directory(path)) {
-        LogPrintf("GetTempPath(): failed to find temp path\n");
-        return fs::path("");
-    }
-    return path;
-#endif
 }
 
 double double_safe_addition(double fValue, double fIncrement)
@@ -664,4 +645,53 @@ void SetThreadPriority(int nPriority)
 int GetNumCores()
 {
     return std::thread::hardware_concurrency();
+}
+
+std::string GetReadableHashRate(uint64_t hashrate) 
+{
+    // Determine the suffix and readable value
+    std::string suffix;
+    double readable;
+    std::stringstream ss;
+
+    if (hashrate >= 1000000000000000000) // Exa
+    {
+        suffix = " EH/s";
+        readable = hashrate / 1000000000000000;
+    }
+    else if (hashrate >= 1000000000000000) // Peta
+    {
+        suffix = " PH/s";
+        readable = hashrate / 1000000000000;
+    }
+    else if (hashrate >= 1000000000000) // Tera
+    {
+        suffix = " TH/s";
+        readable = hashrate / 1000000000;
+    }
+    else if (hashrate >= 1000000000) // Giga
+    {
+        suffix = " GH/s";
+        readable = hashrate / 1000000;
+    }
+    else if (hashrate >= 1000000) // Mega
+    {
+        suffix = " MH/s";
+        readable = hashrate / 1000;
+    }
+    else if (hashrate >= 1000) // Kilo
+    {
+        suffix = " KH/s";
+        readable = hashrate;
+    }
+    else // regular
+    {
+        ss << hashrate << " H/s";
+        return ss.str();
+    }
+    // Divide by 1000 to get fractional value
+    readable = (readable / 1000);
+    // Return formatted number with suffix
+    ss << std::setprecision(3) << std::fixed << readable << suffix;
+    return ss.str();
 }

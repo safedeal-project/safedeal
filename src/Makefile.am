@@ -73,9 +73,12 @@ if BUILD_BITCOIN_UTILS
 endif
 
 .PHONY: FORCE check-symbols check-security
-# safedeal core #
+# SafeDeal Core #
 BITCOIN_CORE_H = \
   activemasternode.h \
+  activemasternodeman.h \
+  activemasternodeconfig.h \
+  addrdb.h \
   addrman.h \
   allocators.h \
   arith_uint256.h \
@@ -107,6 +110,7 @@ BITCOIN_CORE_H = \
   primitives/block.h \
   primitives/transaction.h \
   core_io.h \
+  cuckoocache.h \
   crypter.h \
   pairresult.h \
   addressbook.h \
@@ -116,9 +120,9 @@ BITCOIN_CORE_H = \
   httprpc.h \
   httpserver.h \
   init.h \
+  interface/wallet.h \
   legacy/stakemodifier.h \
   kernel.h \
-  swifttx.h \
   key.h \
   key_io.h \
   keystore.h \
@@ -129,19 +133,19 @@ BITCOIN_CORE_H = \
   memusage.h \
   masternode.h \
   masternode-payments.h \
-  masternode-budget.h \
   masternode-sync.h \
   masternodeman.h \
   masternodeconfig.h \
   merkleblock.h \
   messagesigner.h \
   miner.h \
-  mruset.h \
   net.h \
   netaddress.h \
   netbase.h \
+  netmessagemaker.h \
   noui.h \
   policy/fees.h \
+  policy/policy.h \
   optional.h \
   pow.h \
   prevector.h \
@@ -166,10 +170,12 @@ BITCOIN_CORE_H = \
   sporkdb.h \
   sporkid.h \
   stakeinput.h \
+  script/ismine.h \
   streams.h \
   support/cleanse.h \
   sync.h \
   threadsafety.h \
+  threadinterrupt.h \
   timedata.h \
   tinyformat.h \
   torcontrol.h \
@@ -194,9 +200,9 @@ BITCOIN_CORE_H = \
   validationinterface.h \
   version.h \
   wallet/hdchain.h \
+  wallet/rpcwallet.h \
   wallet/scriptpubkeyman.h \
   wallet/wallet.h \
-  wallet/wallet_ismine.h \
   wallet/walletdb.h \
   zmq/zmqabstractnotifier.h \
   zmq/zmqconfig.h \
@@ -213,6 +219,7 @@ libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
+  addrdb.cpp \
   addrman.cpp \
   bloom.cpp \
   blocksignature.cpp \
@@ -231,17 +238,18 @@ libbitcoin_server_a_SOURCES = \
   net.cpp \
   noui.cpp \
   policy/fees.cpp \
+  policy/policy.cpp \
   pow.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
   rpc/masternode.cpp \
-  rpc/budget.cpp \
   rpc/mining.cpp \
   rpc/misc.cpp \
   rpc/net.cpp \
   rpc/rawtransaction.cpp \
   rpc/server.cpp \
   script/sigcache.cpp \
+  script/ismine.cpp \
   sporkdb.cpp \
   timedata.cpp \
   torcontrol.cpp \
@@ -265,13 +273,14 @@ libbitcoin_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_wallet_a_SOURCES = \
   activemasternode.cpp \
+  activemasternodeconfig.cpp \
+  activemasternodeman.cpp \
   bip38.cpp \
+  interface/wallet.cpp \
   addressbook.cpp \
   crypter.cpp \
   key_io.cpp \
-  swifttx.cpp \
   masternode.cpp \
-  masternode-budget.cpp \
   masternode-payments.cpp \
   masternode-sync.cpp \
   masternodeconfig.cpp \
@@ -285,7 +294,6 @@ libbitcoin_wallet_a_SOURCES = \
   wallet/hdchain.cpp \
   wallet/scriptpubkeyman.cpp \
   wallet/wallet.cpp \
-  wallet/wallet_ismine.cpp \
   wallet/walletdb.cpp \
   stakeinput.cpp \
   $(BITCOIN_CORE_H)
@@ -301,6 +309,8 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/sha512.cpp \
   crypto/chacha20.h \
   crypto/chacha20.cpp \
+  crypto/google_authenticator.cpp \
+  crypto/hmac_sha1.cpp \
   crypto/hmac_sha256.cpp \
   crypto/rfc6979_hmac_sha256.cpp \
   crypto/hmac_sha512.cpp \
@@ -316,6 +326,8 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/common.h \
   crypto/sha256.h \
   crypto/sha512.h \
+  crypto/google_authenticator.h \
+  crypto/hmac_sha1.h \
   crypto/hmac_sha256.h \
   crypto/rfc6979_hmac_sha256.h \
   crypto/hmac_sha512.h \
@@ -328,7 +340,24 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/sph_jh.h \
   crypto/sph_keccak.h \
   crypto/sph_skein.h \
-  crypto/sph_types.h
+  crypto/sph_types.h \
+  crypto/sph_luffa.h \
+  crypto/sph_haval.h \
+  crypto/luffa.c \
+  crypto/sph_cubehash.h \
+  crypto/cubehash.c \
+  crypto/sph_shavite \
+  crypto/shavite.c \
+  crypto/sph_simd.h \
+  crypto/simd.c \
+  crypto/sph_echo \
+  crypto/echo.c \
+  crypto/shabal.c \
+  crypto/whirlpool.c \
+  crypto/haval.c \
+  crypto/hamsi.c \
+  crypto/fugue.c \
+  crypto/sph_sha2big.c
 
 # common: shared between safedeald, and safedeal-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
@@ -383,6 +412,7 @@ libbitcoin_util_a_SOURCES = \
   rpc/protocol.cpp \
   support/cleanse.cpp \
   sync.cpp \
+  threadinterrupt.cpp \
   uint256.cpp \
   blob_uint256.cpp \
   util.cpp \
@@ -397,6 +427,10 @@ libbitcoin_util_a_SOURCES += compat/glibc_compat.cpp
 AM_LDFLAGS += $(COMPAT_LDFLAGS)
 endif
 
+if GLIBC_BACK_COMPAT
+AM_LDFLAGS += $(COMPAT_LDFLAGS)
+endif
+
 # cli: shared between safedeal-cli and safedeal-qt
 libbitcoin_cli_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_cli_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
@@ -408,13 +442,13 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
 # safedeald binary #
-safedeald_SOURCES = safedeald.cpp
+safedeald_SOURCES = pivxd.cpp
 safedeald_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 safedeald_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 safedeald_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-safedeald_SOURCES += safedeald-res.rc
+safedeald_SOURCES += pivxd-res.rc
 endif
 safedeald_LDADD = \
   $(LIBBITCOIN_SERVER) \
@@ -432,13 +466,13 @@ safedeald_LDADD = \
 safedeald_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
 
 # safedeal-cli binary #
-safedeal_cli_SOURCES = safedeal-cli.cpp
+safedeal_cli_SOURCES = pivx-cli.cpp
 safedeal_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
 safedeal_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 safedeal_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-safedeal_cli_SOURCES += safedeal-cli-res.rc
+safedeal_cli_SOURCES += pivx-cli-res.rc
 endif
 
 safedeal_cli_LDADD = \
@@ -451,13 +485,13 @@ safedeal_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
 # safedeal-tx binary #
-safedeal_tx_SOURCES = safedeal-tx.cpp
+safedeal_tx_SOURCES = pivx-tx.cpp
 safedeal_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 safedeal_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 safedeal_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-safedeal_tx_SOURCES += safedeal-tx-res.rc
+safedeal_tx_SOURCES += pivx-tx-res.rc
 endif
 
 safedeal_tx_LDADD = \
@@ -516,6 +550,7 @@ CLEANFILES += script/*.gcda script/*.gcno
 CLEANFILES += support/*.gcda support/*.gcno
 CLEANFILES += univalue/*.gcda univalue/*.gcno
 CLEANFILES += wallet/*.gcda wallet/*.gcno
+CLEANFILES += wallet/test/*.gcda wallet/test/*.gcno
 CLEANFILES += zmq/*.gcda zmq/*.gcno
 CLEANFILES += obj/build.h
 
@@ -528,18 +563,20 @@ CTAES_DIST += crypto/ctaes/test.c
 EXTRA_DIST = $(CTAES_DIST)
 
 
-config/safedeal-config.h: config/stamp-h1
+config/pivx-config.h: config/stamp-h1
 	@$(MAKE) -C $(top_builddir) $(subdir)/$(@)
-config/stamp-h1: $(top_srcdir)/$(subdir)/config/safedeal-config.h.in $(top_builddir)/config.status
+config/stamp-h1: $(top_srcdir)/$(subdir)/config/pivx-config.h.in $(top_builddir)/config.status
 	$(AM_V_at)$(MAKE) -C $(top_builddir) $(subdir)/$(@)
-$(top_srcdir)/$(subdir)/config/safedeal-config.h.in:  $(am__configure_deps)
-	$(AM_V_at)$(MAKE) -C $(top_srcdir) $(subdir)/config/safedeal-config.h.in
+$(top_srcdir)/$(subdir)/config/pivx-config.h.in:  $(am__configure_deps)
+	$(AM_V_at)$(MAKE) -C $(top_srcdir) $(subdir)/config/pivx-config.h.in
 
 clean-local:
 	-$(MAKE) -C secp256k1 clean
 	-$(MAKE) -C univalue clean
 	-rm -f leveldb/*/*.gcda leveldb/*/*.gcno leveldb/helpers/memenv/*.gcda leveldb/helpers/memenv/*.gcno
 	-rm -f config.h
+	-rm -rf test/__pycache__
+	-rm -rf ../target
 
 .rc.o:
 	@test -f $(WINDRES)
@@ -563,7 +600,12 @@ endif
 	$(AM_V_GEN) $(PROTOC) --cpp_out=$(@D) --proto_path=$(<D) $<
 
 if EMBEDDED_LEVELDB
+include Makefile.crc32c.include
 include Makefile.leveldb.include
+endif
+
+if ENABLE_TESTS
+include Makefile.test.include
 endif
 
 if ENABLE_BENCH
@@ -572,4 +614,8 @@ endif
 
 if ENABLE_QT
 include Makefile.qt.include
+endif
+
+if ENABLE_QT_TESTS
+include Makefile.qttest.include
 endif

@@ -1,10 +1,12 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal Coin developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "activemasternode.h"
+#include "activemasternodeman.h"
 #include "db.h"
 #include "init.h"
 #include "main.h"
@@ -14,19 +16,20 @@
 #include "masternodeman.h"
 #include "netbase.h"
 #include "rpc/server.h"
+#include "spork.h"
 #include "utilmoneystr.h"
 
 #include <univalue.h>
 
 #include <boost/tokenizer.hpp>
 
-UniValue listmasternodes(const UniValue& params, bool fHelp)
+UniValue listmasternodes(const JSONRPCRequest& request)
 {
     std::string strFilter = "";
 
-    if (params.size() == 1) strFilter = params[0].get_str();
+    if (request.params.size() == 1) strFilter = request.params[0].get_str();
 
-    if (fHelp || (params.size() > 1))
+    if (request.fHelp || (request.params.size() > 1))
         throw std::runtime_error(
             "listmasternodes ( \"filter\" )\n"
             "\nGet a ranked list of masternodes\n"
@@ -38,11 +41,12 @@ UniValue listmasternodes(const UniValue& params, bool fHelp)
             "[\n"
             "  {\n"
             "    \"rank\": n,           (numeric) Masternode Rank (or 0 if not enabled)\n"
-            "    \"txhash\": \"hash\",    (string) Collateral transaction hash\n"
+            "    \"txhash\": \"hash\",  (string) Collateral transaction hash\n"
             "    \"outidx\": n,         (numeric) Collateral transaction output index\n"
             "    \"pubkey\": \"key\",   (string) Masternode public key used for message broadcasting\n"
             "    \"status\": s,         (string) Status (ENABLED/EXPIRED/REMOVE/etc)\n"
-            "    \"addr\": \"addr\",      (string) Masternode SafeDeal Coin address\n"
+            "    \"addr\": \"addr\",    (string) Masternode SFD address\n"
+            "    \"ip\": \"ip\",        (string) Masternode IP address\n"
             "    \"version\": v,        (numeric) Masternode protocol version\n"
             "    \"lastseen\": ttt,     (numeric) The time in seconds since epoch (Jan 1 1970 GMT) of the last seen\n"
             "    \"activetime\": ttt,   (numeric) The time in seconds since epoch (Jan 1 1970 GMT) masternode has been active\n"
@@ -55,13 +59,9 @@ UniValue listmasternodes(const UniValue& params, bool fHelp)
             HelpExampleCli("listmasternodes", "") + HelpExampleRpc("listmasternodes", ""));
 
     UniValue ret(UniValue::VARR);
-    int nHeight;
-    {
-        LOCK(cs_main);
-        CBlockIndex* pindex = chainActive.Tip();
-        if(!pindex) return 0;
-        nHeight = pindex->nHeight;
-    }
+    int nHeight = WITH_LOCK(cs_main, return chainActive.Height());
+    if (nHeight < 0) return "[]";
+
     std::vector<std::pair<int, CMasternode> > vMasternodeRanks = mnodeman.GetMasternodeRanks(nHeight);
     for (PAIRTYPE(int, CMasternode) & s : vMasternodeRanks) {
         UniValue obj(UniValue::VOBJ);
@@ -91,8 +91,8 @@ UniValue listmasternodes(const UniValue& params, bool fHelp)
             obj.push_back(Pair("pubkey", HexStr(mn->pubKeyMasternode)));
             obj.push_back(Pair("status", strStatus));
             obj.push_back(Pair("addr", EncodeDestination(mn->pubKeyCollateralAddress.GetID())));
+            obj.push_back(Pair("ip", mn->addr.ToString()));
             obj.push_back(Pair("version", mn->protocolVersion));
-            obj.push_back(Pair("ip",strHost));
             obj.push_back(Pair("lastseen", (int64_t)mn->lastPing.sigTime));
             obj.push_back(Pair("activetime", (int64_t)(mn->lastPing.sigTime - mn->sigTime)));
             obj.push_back(Pair("lastpaid", (int64_t)mn->GetLastPaid()));
@@ -104,9 +104,9 @@ UniValue listmasternodes(const UniValue& params, bool fHelp)
     return ret;
 }
 
-UniValue getmasternodecount (const UniValue& params, bool fHelp)
+UniValue getmasternodecount (const JSONRPCRequest& request)
 {
-    if (fHelp || (params.size() > 0))
+    if (request.fHelp || (request.params.size() > 0))
         throw std::runtime_error(
             "getmasternodecount\n"
             "\nGet masternode count values\n"
@@ -123,12 +123,12 @@ UniValue getmasternodecount (const UniValue& params, bool fHelp)
             HelpExampleCli("getmasternodecount", "") + HelpExampleRpc("getmasternodecount", ""));
 
     UniValue obj(UniValue::VOBJ);
-    int nCount = 0;
     int ipv4 = 0, ipv6 = 0, onion = 0;
 
-    if (chainActive.Tip())
-        mnodeman.GetNextMasternodeInQueueForPayment(chainActive.Tip()->nHeight, true, nCount);
+    int nChainHeight = WITH_LOCK(cs_main, return chainActive.Height());
+    if (nChainHeight < 0) return "unknown";
 
+    int nCount = mnodeman.GetNextMasternodeInQueueCount(nChainHeight);
     mnodeman.CountNetworks(ActiveProtocol(), ipv4, ipv6, onion);
 
     obj.push_back(Pair("total", mnodeman.size()));
@@ -142,9 +142,9 @@ UniValue getmasternodecount (const UniValue& params, bool fHelp)
     return obj;
 }
 
-UniValue masternodecurrent (const UniValue& params, bool fHelp)
+UniValue masternodecurrent (const JSONRPCRequest& request)
 {
-    if (fHelp || (params.size() != 0))
+    if (request.fHelp || (request.params.size() != 0))
         throw std::runtime_error(
             "masternodecurrent\n"
             "\nGet current masternode winner (scheduled to be paid next).\n"
@@ -162,8 +162,7 @@ UniValue masternodecurrent (const UniValue& params, bool fHelp)
             HelpExampleCli("masternodecurrent", "") + HelpExampleRpc("masternodecurrent", ""));
 
     const int nHeight = WITH_LOCK(cs_main, return chainActive.Height() + 1);
-    int nCount = 0;
-    CMasternode* winner = mnodeman.GetNextMasternodeInQueueForPayment(nHeight, true, nCount);
+    CMasternode* winner = mnodeman.GetNextMasternodeInQueueForPayment(nHeight);
     if (winner) {
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("protocol", (int64_t)winner->protocolVersion));
@@ -175,31 +174,6 @@ UniValue masternodecurrent (const UniValue& params, bool fHelp)
     }
 
     throw std::runtime_error("unknown");
-}
-
-UniValue masternodedebug (const UniValue& params, bool fHelp)
-{
-    if (fHelp || (params.size() != 0))
-        throw std::runtime_error(
-            "masternodedebug\n"
-            "\nPrint masternode status\n"
-
-            "\nResult:\n"
-            "\"status\"     (string) Masternode status message\n"
-
-            "\nExamples:\n" +
-            HelpExampleCli("masternodedebug", "") + HelpExampleRpc("masternodedebug", ""));
-
-    if (activeMasternode.status != ACTIVE_MASTERNODE_INITIAL || !masternodeSync.IsSynced())
-        return activeMasternode.GetStatus();
-
-    CTxIn vin = CTxIn();
-    CPubKey pubkey;
-    CKey key;
-    if (!activeMasternode.GetMasterNodeVin(vin, pubkey, key))
-        throw std::runtime_error("Missing masternode input, please look at the documentation for instructions on masternode creation\n");
-    else
-        return activeMasternode.GetStatus();
 }
 
 bool StartMasternodeEntry(UniValue& statusObjRet, CMasternodeBroadcast& mnbRet, bool& fSuccessRet, const CMasternodeConfig::CMasternodeEntry& mne, std::string& errorMessage, std::string strCommand = "")
@@ -216,7 +190,7 @@ bool StartMasternodeEntry(UniValue& statusObjRet, CMasternodeBroadcast& mnbRet, 
         if (strCommand == "disabled" && pmn->IsEnabled()) return false;
     }
 
-    fSuccessRet = activeMasternode.CreateBroadcast(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnbRet);
+    fSuccessRet = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnbRet);
 
     statusObjRet.push_back(Pair("alias", mne.getAlias()));
     statusObjRet.push_back(Pair("result", fSuccessRet ? "success" : "failed"));
@@ -260,11 +234,11 @@ void SerializeMNB(UniValue& statusObjRet, const CMasternodeBroadcast& mnb, const
     return SerializeMNB(statusObjRet, mnb, fSuccess, successful, failed);
 }
 
-UniValue startmasternode (const UniValue& params, bool fHelp)
+UniValue startmasternode (const JSONRPCRequest& request)
 {
     std::string strCommand;
-    if (params.size() >= 1) {
-        strCommand = params[0].get_str();
+    if (request.params.size() >= 1) {
+        strCommand = request.params[0].get_str();
 
         // Backwards compatibility with legacy 'masternode' super-command forwarder
         if (strCommand == "start") strCommand = "local";
@@ -275,9 +249,9 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
         if (strCommand == "start-disabled") strCommand = "disabled";
     }
 
-    if (fHelp || params.size() < 2 || params.size() > 3 ||
-        (params.size() == 2 && (strCommand != "local" && strCommand != "all" && strCommand != "many" && strCommand != "missing" && strCommand != "disabled")) ||
-        (params.size() == 3 && strCommand != "alias"))
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 3 ||
+        (request.params.size() == 2 && (strCommand != "local" && strCommand != "all" && strCommand != "many" && strCommand != "missing" && strCommand != "disabled")) ||
+        (request.params.size() == 3 && strCommand != "alias"))
         throw std::runtime_error(
             "startmasternode \"local|all|many|missing|disabled|alias\" lockwallet ( \"alias\" )\n"
             "\nAttempts to start one or more masternode(s)\n"
@@ -306,21 +280,12 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("startmasternode", "\"alias\" \"0\" \"my_mn\"") + HelpExampleRpc("startmasternode", "\"alias\" \"0\" \"my_mn\""));
 
-    bool fLock = (params[1].get_str() == "true" ? true : false);
+    bool fLock = (request.params[1].get_str() == "true" ? true : false);
 
     EnsureWalletIsUnlocked();
 
     if (strCommand == "local") {
-        if (!fMasterNode) throw std::runtime_error("you must set masternode=1 in the configuration\n");
-
-        if (activeMasternode.status != ACTIVE_MASTERNODE_STARTED) {
-            activeMasternode.status = ACTIVE_MASTERNODE_INITIAL; // TODO: consider better way
-            activeMasternode.ManageStatus();
-            if (fLock)
-                pwalletMain->Lock();
-        }
-
-        return activeMasternode.GetStatus();
+        throw std::runtime_error("'local' disabled\n");
     }
 
     if (strCommand == "all" || strCommand == "many" || strCommand == "missing" || strCommand == "disabled") {
@@ -359,7 +324,7 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
     }
 
     if (strCommand == "alias") {
-        std::string alias = params[2].get_str();
+        std::string alias = request.params[2].get_str();
 
         bool found = false;
 
@@ -392,9 +357,9 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
     return NullUniValue;
 }
 
-UniValue createmasternodekey (const UniValue& params, bool fHelp)
+UniValue createmasternodekey (const JSONRPCRequest& request)
 {
-    if (fHelp || (params.size() != 0))
+    if (request.fHelp || (request.params.size() != 0))
         throw std::runtime_error(
             "createmasternodekey\n"
             "\nCreate a new masternode private key\n"
@@ -408,12 +373,12 @@ UniValue createmasternodekey (const UniValue& params, bool fHelp)
     CKey secret;
     secret.MakeNewKey(false);
 
-    return CBitcoinSecret(secret).ToString();
+    return EncodeSecret(secret);
 }
 
-UniValue getmasternodeoutputs (const UniValue& params, bool fHelp)
+UniValue getmasternodeoutputs (const JSONRPCRequest& request)
 {
-    if (fHelp || (params.size() != 0))
+    if (request.fHelp || (request.params.size() != 0))
         throw std::runtime_error(
             "getmasternodeoutputs\n"
             "\nPrint all masternode transaction outputs\n"
@@ -431,7 +396,8 @@ UniValue getmasternodeoutputs (const UniValue& params, bool fHelp)
             HelpExampleCli("getmasternodeoutputs", "") + HelpExampleRpc("getmasternodeoutputs", ""));
 
     // Find possible candidates
-    std::vector<COutput> possibleCoins = activeMasternode.SelectCoinsMasternode();
+    std::vector<COutput> possibleCoins;
+    pwalletMain->AvailableCoins(&possibleCoins, nullptr, ONLY_10000);
 
     UniValue ret(UniValue::VARR);
     for (COutput& out : possibleCoins) {
@@ -444,13 +410,13 @@ UniValue getmasternodeoutputs (const UniValue& params, bool fHelp)
     return ret;
 }
 
-UniValue listmasternodeconf (const UniValue& params, bool fHelp)
+UniValue listmasternodeconf (const JSONRPCRequest& request)
 {
     std::string strFilter = "";
 
-    if (params.size() == 1) strFilter = params[0].get_str();
+    if (request.params.size() == 1) strFilter = request.params[0].get_str();
 
-    if (fHelp || (params.size() > 1))
+    if (request.fHelp || (request.params.size() > 1))
         throw std::runtime_error(
             "listmasternodeconf ( \"filter\" )\n"
             "\nPrint masternode.conf in JSON format\n"
@@ -506,9 +472,9 @@ UniValue listmasternodeconf (const UniValue& params, bool fHelp)
     return ret;
 }
 
-UniValue getmasternodestatus (const UniValue& params, bool fHelp)
+UniValue getmasternodestatus(const JSONRPCRequest& request)
 {
-    if (fHelp || (params.size() != 0))
+    if (request.fHelp || (request.params.size() != 0))
         throw std::runtime_error(
             "getmasternodestatus\n"
             "\nPrint masternode status\n"
@@ -516,9 +482,9 @@ UniValue getmasternodestatus (const UniValue& params, bool fHelp)
             "\nResult:\n"
             "{\n"
             "  \"txhash\": \"xxxx\",      (string) Collateral transaction hash\n"
-            "  \"outputidx\": n,        (numeric) Collateral transaction output index number\n"
+            "  \"outputidx\": n,          (numeric) Collateral transaction output index number\n"
             "  \"netaddr\": \"xxxx\",     (string) Masternode network address\n"
-            "  \"addr\": \"xxxx\",        (string) SafeDeal Coin address for masternode payments\n"
+            "  \"addr\": \"xxxx\",        (string) SFD address for masternode payments\n"
             "  \"status\": \"xxxx\",      (string) Masternode status\n"
             "  \"message\": \"xxxx\"      (string) Masternode status message\n"
             "}\n"
@@ -526,27 +492,53 @@ UniValue getmasternodestatus (const UniValue& params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("getmasternodestatus", "") + HelpExampleRpc("getmasternodestatus", ""));
 
-    if (!fMasterNode) throw std::runtime_error("This is not a masternode");
+    if (!fMasterNode)
+        throw JSONRPCError(RPC_MISC_ERROR, _("This is not a masternode."));
 
-    CMasternode* pmn = mnodeman.Find(activeMasternode.vin);
+    UniValue resultsObj(UniValue::VARR);
 
-    if (pmn) {
-        UniValue mnObj(UniValue::VOBJ);
-        mnObj.push_back(Pair("txhash", activeMasternode.vin.prevout.hash.ToString()));
-        mnObj.push_back(Pair("outputidx", (uint64_t)activeMasternode.vin.prevout.n));
-        mnObj.push_back(Pair("netaddr", activeMasternode.service.ToString()));
-        mnObj.push_back(Pair("addr", EncodeDestination(pmn->pubKeyCollateralAddress.GetID())));
-        mnObj.push_back(Pair("status", activeMasternode.status));
-        mnObj.push_back(Pair("message", activeMasternode.GetStatus()));
-        return mnObj;
+    auto amns = amnodeman.GetActiveMasternodes();
+    auto legacy = amns.size() == 1 && amns[0].strAlias == "legacy";
+
+    for (auto& amn : amns) {
+        if (amn.vin == nullopt) {
+            UniValue mnObj(UniValue::VOBJ);
+            mnObj.push_back(Pair("alias", amn.strAlias));
+            mnObj.push_back(Pair("txhash", "N/A"));
+            mnObj.push_back(Pair("outputidx", -1));
+            mnObj.push_back(Pair("netaddr", amn.service.ToString()));
+            mnObj.push_back(Pair("addr", "N/A"));
+            mnObj.push_back(Pair("status", amn.GetStatus()));
+            mnObj.push_back(Pair("message", amn.GetStatusMessage()));
+            resultsObj.push_back(mnObj);
+            if(legacy && amn.strAlias == "legacy") return mnObj;
+            continue;
+        }
+
+        CMasternode* pmn = mnodeman.Find(*(amn.vin));
+
+        if (pmn) {
+            UniValue mnObj(UniValue::VOBJ);
+            mnObj.push_back(Pair("alias", amn.strAlias));
+            mnObj.push_back(Pair("txhash", amn.vin->prevout.hash.ToString()));
+            mnObj.push_back(Pair("outputidx", (uint64_t)amn.vin->prevout.n));
+            mnObj.push_back(Pair("netaddr", amn.service.ToString()));
+            mnObj.push_back(Pair("addr", EncodeDestination(pmn->pubKeyCollateralAddress.GetID())));
+            mnObj.push_back(Pair("status", amn.GetStatus()));
+            mnObj.push_back(Pair("message", amn.GetStatusMessage()));
+            if(legacy && amn.strAlias == "legacy") return mnObj;
+            resultsObj.push_back(mnObj);
+        } else {
+            throw std::runtime_error("Masternode not found in the list of available masternodes. Current status: " + amn.GetStatusMessage());
+        }
     }
-    throw std::runtime_error("Masternode not found in the list of available masternodes. Current status: "
-                        + activeMasternode.GetStatus());
+
+    return resultsObj;
 }
 
-UniValue getmasternodewinners (const UniValue& params, bool fHelp)
+UniValue getmasternodewinners (const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() > 3)
+    if (request.fHelp || request.params.size() > 3)
         throw std::runtime_error(
             "getmasternodewinners ( blocks \"filter\" )\n"
             "\nPrint the masternode winners for the last n blocks\n"
@@ -560,7 +552,7 @@ UniValue getmasternodewinners (const UniValue& params, bool fHelp)
             "  {\n"
             "    \"nHeight\": n,           (numeric) block height\n"
             "    \"winner\": {\n"
-            "      \"address\": \"xxxx\",    (string) SafeDeal Coin MN Address\n"
+            "      \"address\": \"xxxx\",    (string) SFD MN Address\n"
             "      \"nVotes\": n,          (numeric) Number of votes for winner\n"
             "    }\n"
             "  }\n"
@@ -573,7 +565,7 @@ UniValue getmasternodewinners (const UniValue& params, bool fHelp)
             "    \"nHeight\": n,           (numeric) block height\n"
             "    \"winner\": [\n"
             "      {\n"
-            "        \"address\": \"xxxx\",  (string) SafeDeal Coin MN Address\n"
+            "        \"address\": \"xxxx\",  (string) SFD MN Address\n"
             "        \"nVotes\": n,        (numeric) Number of votes for winner\n"
             "      }\n"
             "      ,...\n"
@@ -585,22 +577,18 @@ UniValue getmasternodewinners (const UniValue& params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("getmasternodewinners", "") + HelpExampleRpc("getmasternodewinners", ""));
 
-    int nHeight;
-    {
-        LOCK(cs_main);
-        CBlockIndex* pindex = chainActive.Tip();
-        if(!pindex) return 0;
-        nHeight = pindex->nHeight;
-    }
+    int nHeight = WITH_LOCK(cs_main, return chainActive.Height());
+    if (nHeight < 0) return "[]";
+    if (sporkManager.IsSporkActive(SPORK_114_MN_PAYMENT_V2)) return "[]"; // voting is disabled
 
     int nLast = 10;
     std::string strFilter = "";
 
-    if (params.size() >= 1)
-        nLast = atoi(params[0].get_str());
+    if (request.params.size() >= 1)
+        nLast = atoi(request.params[0].get_str());
 
-    if (params.size() == 2)
-        strFilter = params[1].get_str();
+    if (request.params.size() == 2)
+        strFilter = request.params[1].get_str();
 
     UniValue ret(UniValue::VARR);
 
@@ -646,9 +634,9 @@ UniValue getmasternodewinners (const UniValue& params, bool fHelp)
     return ret;
 }
 
-UniValue getmasternodescores (const UniValue& params, bool fHelp)
+UniValue getmasternodescores (const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() > 1)
+    if (request.fHelp || request.params.size() > 1)
         throw std::runtime_error(
             "getmasternodescores ( blocks )\n"
             "\nPrint list of winning masternode by score\n"
@@ -667,17 +655,20 @@ UniValue getmasternodescores (const UniValue& params, bool fHelp)
 
     int nLast = 10;
 
-    if (params.size() == 1) {
+    if (request.params.size() == 1) {
         try {
-            nLast = std::stoi(params[0].get_str());
+            nLast = std::stoi(request.params[0].get_str());
         } catch (const std::invalid_argument&) {
             throw std::runtime_error("Exception on param 2");
         }
     }
-    UniValue obj(UniValue::VOBJ);
+    int nChainHeight = WITH_LOCK(cs_main, return chainActive.Height());
+    if (nChainHeight < 0) return "{}";
+    if (sporkManager.IsSporkActive(SPORK_114_MN_PAYMENT_V2)) return "{}"; // voting is disabled
 
+    UniValue obj(UniValue::VOBJ);
     std::vector<CMasternode> vMasternodes = mnodeman.GetFullMasternodeVector();
-    for (int nHeight = chainActive.Tip()->nHeight - nLast; nHeight < chainActive.Tip()->nHeight + 20; nHeight++) {
+    for (int nHeight = nChainHeight - nLast; nHeight < nChainHeight + 20; nHeight++) {
         uint256 nHigh;
         CMasternode* pBestMasternode = NULL;
         for (CMasternode& mn : vMasternodes) {
@@ -710,12 +701,12 @@ bool DecodeHexMnb(CMasternodeBroadcast& mnb, std::string strHexMnb) {
 
     return true;
 }
-UniValue createmasternodebroadcast(const UniValue& params, bool fHelp)
+UniValue createmasternodebroadcast(const JSONRPCRequest& request)
 {
     std::string strCommand;
-    if (params.size() >= 1)
-        strCommand = params[0].get_str();
-    if (fHelp || (strCommand != "alias" && strCommand != "all") || (strCommand == "alias" && params.size() < 2))
+    if (request.params.size() >= 1)
+        strCommand = request.params[0].get_str();
+    if (request.fHelp || (strCommand != "alias" && strCommand != "all") || (strCommand == "alias" && request.params.size() < 2))
         throw std::runtime_error(
             "createmasternodebroadcast \"command\" ( \"alias\")\n"
             "\nCreates a masternode broadcast message for one or all masternodes configured in masternode.conf\n" +
@@ -758,7 +749,7 @@ UniValue createmasternodebroadcast(const UniValue& params, bool fHelp)
         if (fImporting || fReindex)
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Wait for reindex and/or import to finish");
 
-        std::string alias = params[1].get_str();
+        std::string alias = request.params[1].get_str();
         bool found = false;
 
         UniValue statusObj(UniValue::VOBJ);
@@ -819,9 +810,9 @@ UniValue createmasternodebroadcast(const UniValue& params, bool fHelp)
     return NullUniValue;
 }
 
-UniValue decodemasternodebroadcast(const UniValue& params, bool fHelp)
+UniValue decodemasternodebroadcast(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 1)
+    if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
             "decodemasternodebroadcast \"hexstring\"\n"
             "\nCommand to decode masternode broadcast messages\n"
@@ -856,7 +847,7 @@ UniValue decodemasternodebroadcast(const UniValue& params, bool fHelp)
 
     CMasternodeBroadcast mnb;
 
-    if (!DecodeHexMnb(mnb, params[0].get_str()))
+    if (!DecodeHexMnb(mnb, request.params[0].get_str()))
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Masternode broadcast message decode failed");
 
     UniValue resultObj(UniValue::VOBJ);
@@ -885,9 +876,9 @@ UniValue decodemasternodebroadcast(const UniValue& params, bool fHelp)
     return resultObj;
 }
 
-UniValue relaymasternodebroadcast(const UniValue& params, bool fHelp)
+UniValue relaymasternodebroadcast(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 1)
+    if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
             "relaymasternodebroadcast \"hexstring\"\n"
             "\nCommand to relay masternode broadcast messages\n"
@@ -901,7 +892,7 @@ UniValue relaymasternodebroadcast(const UniValue& params, bool fHelp)
 
     CMasternodeBroadcast mnb;
 
-    if (!DecodeHexMnb(mnb, params[0].get_str()))
+    if (!DecodeHexMnb(mnb, request.params[0].get_str()))
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Masternode broadcast message decode failed");
 
     if(!mnb.CheckSignature())

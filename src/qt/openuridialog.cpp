@@ -1,5 +1,6 @@
-//Copyright (c) 2019 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2019 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,7 +9,7 @@
 
 #include "guiutil.h"
 #include "walletmodel.h"
-#include "qt/safedeal/qtutils.h"
+#include "qt/pivx/qtutils.h"
 
 #include <QUrl>
 #include <QFile>

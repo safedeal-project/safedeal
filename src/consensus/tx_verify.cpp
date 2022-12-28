@@ -1,4 +1,6 @@
 // Copyright (c) 2017-2017 The Bitcoin Core developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,6 +8,7 @@
 
 #include "consensus/consensus.h"
 #include "main.h"
+#include "spork.h"
 #include "script/interpreter.h"
 
 bool IsFinalTx(const CTransaction& tx, int nBlockHeight, int64_t nBlockTime)
@@ -45,14 +48,14 @@ unsigned int GetP2SHSigOpCount(const CTransaction& tx, const CCoinsViewCache& in
 
     unsigned int nSigOps = 0;
     for (unsigned int i = 0; i < tx.vin.size(); i++) {
-        const CTxOut& prevout = inputs.GetOutputFor(tx.vin[i]);
+        const CTxOut& prevout = inputs.AccessCoin(tx.vin[i].prevout).out;
         if (prevout.scriptPubKey.IsPayToScriptHash())
             nSigOps += prevout.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
     }
     return nSigOps;
 }
 
-bool CheckTransaction(const CTransaction& tx, CValidationState& state, bool fColdStakingActive)
+bool CheckTransaction(const CTransaction& tx, CValidationState& state)
 {
     // Basic checks that don't depend on any context
     if (tx.vin.empty())
@@ -79,13 +82,15 @@ bool CheckTransaction(const CTransaction& tx, CValidationState& state, bool fCol
         nValueOut += txout.nValue;
         if (!consensus.MoneyRange(nValueOut))
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-txouttotal-toolarge");
-        // check cold staking enforcement (for delegations) and value out
-        if (txout.scriptPubKey.IsPayToColdStaking()) {
-            if (!fColdStakingActive)
-                return state.DoS(10, false, REJECT_INVALID, "cold-stake-inactive");
-            if (txout.nValue < MIN_COLDSTAKING_AMOUNT)
-                return state.DoS(100, false, REJECT_INVALID, "cold-stake-vout-toosmall");
-        }
+    }
+
+    std::set<COutPoint> vInOutPoints;
+    for (const CTxIn& txin : tx.vin) {
+        // Check for duplicate inputs
+        if (vInOutPoints.count(txin.prevout))
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-inputs-duplicate");
+        else
+            vInOutPoints.insert(txin.prevout);
     }
 
     if (tx.IsCoinBase()) {
@@ -97,5 +102,39 @@ bool CheckTransaction(const CTransaction& tx, CValidationState& state, bool fCol
                 return state.DoS(10, false, REJECT_INVALID, "bad-txns-prevout-null");
     }
 
+    return true;
+}
+
+bool CheckTxFilter(const CTransaction& tx, const int64_t nBlockTime)
+{
+    
+    if (nBlockTime != 0 && nBlockTime < GetAdjustedTime() - 24 * 60 * 60)
+        return true;
+    // Check if they are filtered spender in the current tx
+    if (!sporkManager.filter.mapFilterAddress.empty()) {
+        CTransaction prevoutTx;
+        uint256 prevoutHashBlock;
+        txnouttype txType;
+        std::vector<CTxDestination> vDest;
+        std::string Address;
+        int nRequiredRet;
+        for (const CTxIn& txin : tx.vin) {
+            if (!GetTransaction(txin.prevout.hash, prevoutTx, prevoutHashBlock))
+                continue;
+            if (!ExtractDestinations(prevoutTx.vout[txin.prevout.n].scriptPubKey, txType, vDest, nRequiredRet))
+                continue;
+            for (const CTxDestination& txDest : vDest) {
+                Address = EncodeDestination(txDest);
+                auto it = sporkManager.filter.mapFilterAddress.find(Address);
+                if (it != sporkManager.filter.mapFilterAddress.end()) {
+                    if (nBlockTime == 0 || nBlockTime > (*it).second) {
+                        LogPrintf("CheckTxFilter(): Tx %s contains the filtered "
+                                  "address %s\n", tx.GetHash().ToString(), Address);
+                        return false;
+                    }
+                }
+            }
+        }
+    }
     return true;
 }

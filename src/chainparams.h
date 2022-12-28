@@ -1,13 +1,15 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_CHAINPARAMS_H
 #define BITCOIN_CHAINPARAMS_H
+
 
 #include "chainparamsbase.h"
 #include "checkpoints.h"
@@ -17,8 +19,7 @@
 #include "uint256.h"
 
 #include <vector>
-
-typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
+#include <map>
 
 struct CDNSSeedData {
     std::string name, host;
@@ -48,13 +49,12 @@ public:
         EXT_PUBLIC_KEY, // BIP32
         EXT_SECRET_KEY, // BIP32
         EXT_COIN_TYPE,  // BIP44
-        STAKING_ADDRESS,
 
         MAX_BASE58_TYPES
     };
 
     const Consensus::Params& GetConsensus() const { return consensus; }
-    const MessageStartChars& MessageStart() const { return pchMessageStart; }
+    const CMessageHeader::MessageStartChars& MessageStart() const { return pchMessageStart; }
     int GetDefaultPort() const { return nDefaultPort; }
 
     const CBlock& GenesisBlock() const { return genesis; }
@@ -84,7 +84,7 @@ protected:
     std::string strNetworkID;
     CBlock genesis;
     Consensus::Params consensus;
-    MessageStartChars pchMessageStart;
+    CMessageHeader::MessageStartChars pchMessageStart;
     int nDefaultPort;
     std::vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];

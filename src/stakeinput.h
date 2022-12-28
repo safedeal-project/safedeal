@@ -1,10 +1,11 @@
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_STAKEINPUT_H
-#define SafeDeal_STAKEINPUT_H
+#ifndef PIVX_STAKEINPUT_H
+#define PIVX_STAKEINPUT_H
 
 #include "chain.h"
 #include "streams.h"
@@ -27,20 +28,20 @@ public:
     virtual bool GetTxFrom(CTransaction& tx) const = 0;
     virtual bool GetTxOutFrom(CTxOut& out) const = 0;
     virtual CAmount GetValue() const = 0;
-    virtual bool CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmount nTotal) = 0;
+    virtual bool CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmount nTotal, const bool onlyP2PK) = 0;
     virtual CDataStream GetUniqueness() const = 0;
     virtual bool ContextCheck(int nHeight, uint32_t nTime) = 0;
 };
 
 
-class CSFDStake : public CStakeInput
+class CPivStake : public CStakeInput
 {
 private:
     CTransaction txFrom{CTransaction()};
     unsigned int nPosition{0};
 
 public:
-    CSFDStake() {}
+    CPivStake() {}
 
     bool InitFromTxIn(const CTxIn& txin) override;
     bool SetPrevout(CTransaction txPrev, unsigned int n);
@@ -51,9 +52,9 @@ public:
     CAmount GetValue() const override;
     CDataStream GetUniqueness() const override;
     bool CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut = UINT256_ZERO) override;
-    bool CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmount nTotal) override;
+    bool CreateTxOuts(CWallet* pwallet, std::vector<CTxOut>& vout, CAmount nTotal, const bool onlyP2PK) override;
     bool ContextCheck(int nHeight, uint32_t nTime) override;
 };
 
 
-#endif //SafeDeal_STAKEINPUT_H
+#endif //PIVX_STAKEINPUT_H

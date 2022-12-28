@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +11,7 @@
 #include "allocators.h"
 #include "keystore.h"
 #include "serialize.h"
+#include "streams.h"
 
 class uint256;
 
@@ -75,6 +77,18 @@ namespace wallet_crypto
     class TestCrypter;
 }
 
+class CSecureDataStream : public CBaseDataStream<CKeyingMaterial>
+{
+public:
+    explicit CSecureDataStream(int nTypeIn, int nVersionIn) : CBaseDataStream(nTypeIn, nVersionIn) { }
+
+    CSecureDataStream(const_iterator pbegin, const_iterator pend, int nTypeIn, int nVersionIn) :
+            CBaseDataStream(pbegin, pend, nTypeIn, nVersionIn) { }
+
+    CSecureDataStream(const vector_type& vchIn, int nTypeIn, int nVersionIn) :
+            CBaseDataStream(vchIn, nTypeIn, nVersionIn) { }
+};
+
 /** Encryption/decryption context with key information */
 class CCrypter
 {
@@ -129,7 +143,7 @@ private:
 protected:
     // TODO: In the future, move this variable to the wallet class directly following upstream's structure.
     CKeyingMaterial vMasterKey;
-
+    
     bool SetCrypted();
 
     //! will encrypt previously unencrypted keys

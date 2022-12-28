@@ -1,10 +1,12 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SafeDeal_KEY_IO_H
-#define SafeDeal_KEY_IO_H
+#ifndef PIVX_KEY_IO_H
+#define PIVX_KEY_IO_H
 
 #include "chainparams.h"
 #include "key.h"
@@ -23,6 +25,9 @@ namespace KeyIO {
 
     std::string EncodeExtKey(const CExtKey &extkey);
 
+    CExtPubKey DecodeExtPubKey(const std::string &str);
+
+    std::string EncodeExtPubKey(const CExtPubKey &extkey);
 }
 
-#endif //SafeDeal_KEY_IO_H
+#endif //PIVX_KEY_IO_H

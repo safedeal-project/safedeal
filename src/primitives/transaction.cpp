@@ -1,7 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,7 +29,7 @@ std::string COutPoint::ToStringShort() const
     return strprintf("%s-%u", hash.ToString().substr(0,64), n);
 }
 
-uint256 COutPoint::GetHash()
+uint256 COutPoint::GetHash() const
 {
     return Hash(BEGIN(hash), END(hash), BEGIN(n), END(n));
 }
@@ -53,7 +54,7 @@ std::string CTxIn::ToString() const
     str += "CTxIn(";
     str += prevout.ToString();
     if (prevout.IsNull())
-            str += strprintf(", coinbase %s", HexStr(scriptSig));
+        str += strprintf(", coinbase %s", HexStr(scriptSig));
     else
         str += strprintf(", scriptSig=%s", HexStr(scriptSig).substr(0, 24));
     if (nSequence != std::numeric_limits<unsigned int>::max())
@@ -84,7 +85,7 @@ bool CTxOut::GetKeyIDFromUTXO(CKeyID& keyIDRet) const
         keyIDRet = CPubKey(vSolutions[0]).GetID();
         return true;
     }
-    if (whichType == TX_PUBKEYHASH || whichType == TX_COLDSTAKE) {
+    if (whichType == TX_PUBKEYHASH) {
         keyIDRet = CKeyID(uint160(vSolutions[0]));
         return true;
     }
@@ -155,46 +156,12 @@ bool CTransaction::IsCoinStake() const
     return (vout.size() >= 2 && vout[0].IsEmpty());
 }
 
-bool CTransaction::CheckColdStake(const CScript& script) const
-{
-
-    // tx is a coinstake tx
-    if (!IsCoinStake())
-        return false;
-
-    // all inputs have the same scriptSig
-    CScript firstScript = vin[0].scriptSig;
-    if (vin.size() > 1) {
-        for (unsigned int i=1; i<vin.size(); i++)
-            if (vin[i].scriptSig != firstScript) return false;
-    }
-
-    // all outputs except first (coinstake marker) and last (masternode payout)
-    // have the same pubKeyScript and it matches the script we are spending
-    if (vout[1].scriptPubKey != script) return false;
-    if (vin.size() > 3) {
-        for (unsigned int i=2; i<vout.size()-1; i++)
-            if (vout[i].scriptPubKey != script) return false;
-    }
-
-    return true;
-}
-
-bool CTransaction::HasP2CSOutputs() const
-{
-    for(const CTxOut& txout : vout) {
-        if (txout.scriptPubKey.IsPayToColdStaking())
-            return true;
-    }
-    return false;
-}
-
 CAmount CTransaction::GetValueOut() const
 {
     CAmount nValueOut = 0;
     for (std::vector<CTxOut>::const_iterator it(vout.begin()); it != vout.end(); ++it)
     {
-        // SafeDeal: previously MoneyRange() was called here. This has been replaced with negative check and boundary wrap check.
+        // SFD: previously MoneyRange() was called here. This has been replaced with negative check and boundary wrap check.
         if (it->nValue < 0)
             throw std::runtime_error("CTransaction::GetValueOut() : value out of range : less than 0");
 
@@ -204,25 +171,6 @@ CAmount CTransaction::GetValueOut() const
         nValueOut += it->nValue;
     }
     return nValueOut;
-}
-
-bool CTransaction::UsesUTXO(const COutPoint out)
-{
-    for (const CTxIn& in : vin) {
-        if (in.prevout == out)
-            return true;
-    }
-
-    return false;
-}
-
-std::list<COutPoint> CTransaction::GetOutPoints() const
-{
-    std::list<COutPoint> listOutPoints;
-    uint256 txHash = GetHash();
-    for (unsigned int i = 0; i < vout.size(); i++)
-        listOutPoints.emplace_back(COutPoint(txHash, i));
-    return listOutPoints;
 }
 
 double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSize) const

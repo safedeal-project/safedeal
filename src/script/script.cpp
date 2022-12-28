@@ -1,7 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -141,15 +142,7 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP9                   : return "OP_NOP9";                  // OP_NOP9
     case OP_NOP10                  : return "OP_NOP10";                 // OP_NOP10
 
-    // cold staking
-    case OP_CHECKCOLDSTAKEVERIFY   : return "OP_CHECKCOLDSTAKEVERIFY";
-
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
-
-    // Note:
-    //  The template matching params OP_SMALLINTEGER/etc are defined in opcodetype enum
-    //  as kind of implementation hack, they are *NOT* real opcodes.  If found in real
-    //  Script, just let the default: case deal with them.
 
     default:
         return "OP_UNKNOWN";
@@ -235,18 +228,6 @@ bool CScript::IsPayToScriptHash() const
             (*this)[0] == OP_HASH160 &&
             (*this)[1] == 0x14 &&
             (*this)[22] == OP_EQUAL);
-}
-
-bool CScript::IsPayToColdStaking() const
-{
-    // Extra-fast test for pay-to-cold-staking CScripts:
-    return (this->size() == 51 &&
-            (*this)[2] == OP_ROT &&
-            (*this)[4] == OP_CHECKCOLDSTAKEVERIFY &&
-            (*this)[5] == 0x14 &&
-            (*this)[27] == 0x14 &&
-            (*this)[49] == OP_EQUALVERIFY &&
-            (*this)[50] == OP_CHECKSIG);
 }
 
 bool CScript::StartsWithOpcode(const opcodetype opcode) const

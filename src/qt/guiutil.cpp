@@ -1,7 +1,8 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -19,6 +20,7 @@
 #include "script/script.h"
 #include "script/standard.h"
 #include "util.h"
+#include "qt/pivx/qtutils.h"
 
 #ifdef WIN32
 #ifdef _WIN32_WINNT
@@ -50,6 +52,7 @@
 #include <QFileDialog>
 #include <QFont>
 #include <QLineEdit>
+#include <QScreen>
 #include <QSettings>
 #include <QTextDocument> // for Qt::mightBeRichText
 #include <QThread>
@@ -57,9 +60,7 @@
 #include <QMouseEvent>
 
 
-#if BOOST_FILESYSTEM_VERSION >= 3
 static fs::detail::utf8_codecvt_facet utf8;
-#endif
 
 #if defined(Q_OS_MAC)
 extern double NSAppKitVersionNumber;
@@ -137,7 +138,7 @@ void setupAddressWidget(QValidatedLineEdit* widget, QWidget* parent)
     widget->setFont(bitcoinAddressFont());
     // We don't want translators to use own addresses in translations
     // and this is the only place, where this address is supplied.
-    widget->setPlaceholderText(QObject::tr("Enter SafeDeal Coin address (e.g. %1)").arg("M6tGR83SQbie1SW72hjcWJvFfip5krte2Z"));
+    widget->setPlaceholderText(QObject::tr("Enter SFD address (e.g. %1)").arg("D7VFR83SQbiezrW72hjcWJtcfip5krte2Z"));
     widget->setValidator(new BitcoinAddressEntryValidator(parent));
     widget->setCheckValidator(new BitcoinAddressCheckValidator(parent));
 }
@@ -159,7 +160,7 @@ void updateWidgetTextAndCursorPosition(QLineEdit* widget, const QString& str)
 
 bool parseBitcoinURI(const QUrl& uri, SendCoinsRecipient* out)
 {
-    // return if URI is not valid or is no SafeDeal: URI
+    // return if URI is not valid or is no SFD: URI
     if (!uri.isValid() || uri.scheme() != QString(URI_SCHEME))
         return false;
 
@@ -190,7 +191,7 @@ bool parseBitcoinURI(const QUrl& uri, SendCoinsRecipient* out)
             fShouldReturnFalse = false;
         } else if (i->first == "amount") {
             if (!i->second.isEmpty()) {
-                if (!BitcoinUnits::parse(BitcoinUnits::SFD, i->second, &rv.amount)) {
+                if (!BitcoinUnits::parse(BitcoinUnits::PIV, i->second, &rv.amount)) {
                     return false;
                 }
             }
@@ -225,7 +226,7 @@ QString formatBitcoinURI(const SendCoinsRecipient& info)
     int paramCount = 0;
 
     if (info.amount) {
-        ret += QString("?amount=%1").arg(BitcoinUnits::format(BitcoinUnits::SFD, info.amount, false, BitcoinUnits::separatorNever));
+        ret += QString("?amount=%1").arg(BitcoinUnits::format(BitcoinUnits::PIV, info.amount, false, BitcoinUnits::separatorNever));
         paramCount++;
     }
 
@@ -279,17 +280,17 @@ void copyEntryData(QAbstractItemView* view, int column, int role)
     }
 }
 
-QString getEntryData(QAbstractItemView *view, int column, int role)
+QVariant getEntryData(QAbstractItemView *view, int column, int role)
 {
     if (!view || !view->selectionModel())
-        return QString();
+        return QVariant();
     QModelIndexList selection = view->selectionModel()->selectedRows(column);
 
     if (!selection.isEmpty()) {
         // Return first item
-        return (selection.at(0).data(role).toString());
+        return (selection.at(0).data(role));
     }
-    return QString();
+    return QVariant();
 }
 
 QString getSaveFileName(QWidget* parent, const QString& caption, const QString& dir, const QString& filter, QString* selectedSuffixOut)
@@ -629,12 +630,12 @@ bool DHMSTableWidgetItem::operator<(QTableWidgetItem const& item) const
 #ifdef WIN32
 fs::path static StartupShortcutPath()
 {
-    return GetSpecialFolderPath(CSIDL_STARTUP) / "SafeDeal.lnk";
+    return GetSpecialFolderPath(CSIDL_STARTUP) / "safedeal.lnk";
 }
 
 bool GetStartOnSystemStartup()
 {
-    // check for SafeDeal.lnk
+    // check for safedeal.lnk
     return fs::exists(StartupShortcutPath());
 }
 
@@ -745,7 +746,7 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         // Write a safedeal.desktop file to the autostart directory:
         optionFile << "[Desktop Entry]\n";
         optionFile << "Type=Application\n";
-        optionFile << "Name=SafeDeal Coin\n";
+        optionFile << "Name=SafeDeal\n";
         optionFile << "Exec=" << pszExePath << " -min\n";
         optionFile << "Terminal=false\n";
         optionFile << "Hidden=false\n";
@@ -839,7 +840,7 @@ void restoreWindowGeometry(const QString& strSetting, const QSize& defaultSize, 
     QSize size = settings.value(strSetting + "Size", defaultSize).toSize();
 
     if (!pos.x() && !pos.y()) {
-        QRect screen = QApplication::desktop()->screenGeometry();
+        QRect screen = QGuiApplication::primaryScreen()->geometry();
         pos.setX((screen.width() - size.width()) / 2);
         pos.setY((screen.height() - size.height()) / 2);
     }
@@ -876,8 +877,8 @@ QString loadStyleSheet()
         if (!theme.isEmpty()) {
             cssName = QString(":/css/") + theme;
         } else {
-            cssName = QString(":/css/default");
-            settings.setValue("theme", "default");
+            cssName = QString(":/css/default-dark");
+            setTheme(false);
         }
     }
 
@@ -895,7 +896,6 @@ void setClipboard(const QString& str)
     QApplication::clipboard()->setText(str, QClipboard::Selection);
 }
 
-#if BOOST_FILESYSTEM_VERSION >= 3
 fs::path qstringToBoostPath(const QString& path)
 {
     return fs::path(path.toStdString(), utf8);
@@ -905,18 +905,6 @@ QString boostPathToQString(const fs::path& path)
 {
     return QString::fromStdString(path.string(utf8));
 }
-#else
-#warning Conversion between boost path and QString can use invalid character encoding with boost_filesystem v2 and older
-fs::path qstringToBoostPath(const QString& path)
-{
-    return fs::path(path.toStdString());
-}
-
-QString boostPathToQString(const fs::path& path)
-{
-    return QString::fromStdString(path.string());
-}
-#endif
 
 QString formatDurationStr(int secs)
 {

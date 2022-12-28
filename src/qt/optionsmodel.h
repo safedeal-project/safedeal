@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2013 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,7 +17,7 @@ QT_BEGIN_NAMESPACE
 class QNetworkProxy;
 QT_END_NAMESPACE
 
-/** Interface from Qt to configuration data structure for SafeDeal client.
+/** Interface from Qt to configuration data structure for SFD client.
    To Qt, the options are presented as a list with the different options
    laid out vertically.
    This can be changed to a tree once the settings become sufficiently
@@ -46,18 +47,13 @@ public:
         ThreadsScriptVerif,  // int
         DatabaseCache,       // int
         SpendZeroConfChange, // bool
-        ZeromintEnable,      // bool
-        ZeromintAddresses,   // bool
-        ZeromintPercentage,  // int
-        ZeromintPrefDenom,   // int
         HideCharts,          // bool
         HideZeroBalances,    // bool
         HideOrphans,    // bool
-        AnonymizeSafeDealAmount, //int
+        AnonymizePivxAmount, //int
         ShowMasternodesTab,  // bool
         Listen,              // bool
         StakeSplitThreshold,    // CAmount (LongLong)
-        ShowColdStakingScreen,  // bool
         fUseCustomFee,          // bool
         nCustomFee,             // CAmount (LongLong)
         OptionIDRowCount,
@@ -89,6 +85,7 @@ public:
     bool getProxySettings(QNetworkProxy& proxy) const;
     bool getCoinControlFeatures() { return fCoinControlFeatures; }
     const QString& getOverriddenByCommandLine() { return strOverriddenByCommandLine; }
+    const QString& getLang() { return language; }
 
     /* Restart flag helper */
     void setRestartRequired(bool fRequired);
@@ -96,16 +93,6 @@ public:
     void setSSTChanged(bool fChanged);
     bool isSSTChanged();
     bool resetSettings;
-
-    bool isColdStakingScreenEnabled() { return showColdStakingScreen; }
-    bool invertColdStakingScreenStatus() {
-        setData(
-                createIndex(ShowColdStakingScreen, 0),
-                !isColdStakingScreenEnabled(),
-                Qt::EditRole
-        );
-        return showColdStakingScreen;
-    }
 
     // Reset
     void setMainDefaultOptions(QSettings& settings, bool reset = false);
@@ -122,7 +109,6 @@ private:
     int nDisplayUnit;
     QString strThirdPartyTxUrls;
     bool fCoinControlFeatures;
-    bool showColdStakingScreen;
     bool fHideCharts;
     bool fHideZeroBalances;
     bool fHideOrphans;
@@ -134,13 +120,7 @@ private:
 
 Q_SIGNALS:
     void displayUnitChanged(int unit);
-    void zeromintEnableChanged(bool);
-    void zeromintAddressesChanged(bool);
-    void zeromintPercentageChanged(int);
-    void preferredDenomChanged(int);
-    void anonymizeSafeDealAmountChanged(int);
     void coinControlFeaturesChanged(bool);
-    void showHideColdStakingScreen(bool);
     void hideChartsChanged(bool);
     void hideZeroBalancesChanged(bool);
     void hideOrphansChanged(bool);

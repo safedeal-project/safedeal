@@ -1,7 +1,8 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -22,18 +23,18 @@ BitcoinUnits::BitcoinUnits(QObject* parent) : QAbstractListModel(parent),
 QList<BitcoinUnits::Unit> BitcoinUnits::availableUnits()
 {
     QList<BitcoinUnits::Unit> unitlist;
-    unitlist.append(SFD);
-    unitlist.append(mSFD);
-    unitlist.append(uSFD);
+    unitlist.append(PIV);
+    unitlist.append(mPIV);
+    unitlist.append(uPIV);
     return unitlist;
 }
 
 bool BitcoinUnits::valid(int unit)
 {
     switch (unit) {
-    case SFD:
-    case mSFD:
-    case uSFD:
+    case PIV:
+    case mPIV:
+    case uPIV:
         return true;
     default:
         return false;
@@ -43,12 +44,12 @@ bool BitcoinUnits::valid(int unit)
 QString BitcoinUnits::id(int unit)
 {
     switch (unit) {
-    case SFD:
-        return QString("safedeal");
-    case mSFD:
-        return QString("msafedeal");
-    case uSFD:
-        return QString::fromUtf8("usafedeal");
+    case PIV:
+        return QString("SFD");
+    case mPIV:
+        return QString("mSFD");
+    case uPIV:
+        return QString::fromUtf8("uSFD");
     default:
         return QString("???");
     }
@@ -59,22 +60,22 @@ QString BitcoinUnits::name(int unit)
     const QString CURR_UNIT = QString(CURRENCY_UNIT.c_str());
     if (Params().NetworkID() == CBaseChainParams::MAIN) {
         switch (unit) {
-        case SFD:
+        case PIV:
             return CURR_UNIT;
-        case mSFD:
+        case mPIV:
             return QString("m") + CURR_UNIT;
-        case uSFD:
+        case uPIV:
             return QString::fromUtf8("μ") + CURR_UNIT;
         default:
             return QString("???");
         }
     } else {
         switch (unit) {
-        case SFD:
+        case PIV:
             return QString("t") + CURR_UNIT;
-        case mSFD:
+        case mPIV:
             return QString("mt") + CURR_UNIT;
-        case uSFD:
+        case uPIV:
             return QString::fromUtf8("μt") + CURR_UNIT;
         default:
             return QString("???");
@@ -87,22 +88,22 @@ QString BitcoinUnits::description(int unit)
     const QString CURR_UNIT = QString(CURRENCY_UNIT.c_str());
     if (Params().NetworkID() == CBaseChainParams::MAIN) {
         switch (unit) {
-        case SFD:
+        case PIV:
             return CURR_UNIT;
-        case mSFD:
+        case mPIV:
             return QString("Milli-") + CURR_UNIT + QString(" (1 / 1" THIN_SP_UTF8 "000)");
-        case uSFD:
+        case uPIV:
             return QString("Micro-") + CURR_UNIT + QString(" (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
         default:
             return QString("???");
         }
     } else {
         switch (unit) {
-        case SFD:
+        case PIV:
             return QString("Test") + CURR_UNIT;
-        case mSFD:
+        case mPIV:
             return QString("Milli-Test") + CURR_UNIT + QString(" (1 / 1" THIN_SP_UTF8 "000)");
-        case uSFD:
+        case uPIV:
             return QString("Micro-Test") + CURR_UNIT + QString(" (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
         default:
             return QString("???");
@@ -113,11 +114,11 @@ QString BitcoinUnits::description(int unit)
 qint64 BitcoinUnits::factor(int unit)
 {
     switch (unit) {
-    case SFD:
+    case PIV:
         return 100000000;
-    case mSFD:
+    case mPIV:
         return 100000;
-    case uSFD:
+    case uPIV:
         return 100;
     default:
         return 100000000;
@@ -127,11 +128,11 @@ qint64 BitcoinUnits::factor(int unit)
 int BitcoinUnits::decimals(int unit)
 {
     switch (unit) {
-    case SFD:
+    case PIV:
         return 8;
-    case mSFD:
+    case mPIV:
         return 5;
-    case uSFD:
+    case uPIV:
         return 2;
     default:
         return 0;

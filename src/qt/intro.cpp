@@ -1,7 +1,8 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2019 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2019 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,7 +13,7 @@
 #include "guiutil.h"
 
 #include "util.h"
-#include "qt/safedeal/qtutils.h"
+#include "qt/pivx/qtutils.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -181,7 +182,7 @@ bool Intro::pickDataDirectory()
     dataDir = settings.value("strDataDir", dataDir).toString();
 
 
-    if (!fs::exists(GUIUtil::qstringToBoostPath(dataDir)) || GetBoolArg("-choosedatadir", false)) {
+    if (!fs::exists(GUIUtil::qstringToBoostPath(dataDir)) || GetBoolArg("-choosedatadir", DEFAULT_CHOOSE_DATADIR)) {
         // If current default data directory does not exist, let the user choose one
         Intro intro;
         intro.setDataDirectory(dataDir);
@@ -197,7 +198,7 @@ bool Intro::pickDataDirectory()
                 TryCreateDirectory(GUIUtil::qstringToBoostPath(dataDir));
                 break;
             } catch (const fs::filesystem_error& e) {
-                QMessageBox::critical(0, tr("SafeDeal Coin Core"),
+                QMessageBox::critical(0, tr("SafeDeal"),
                     tr("Error: Specified data directory \"%1\" cannot be created.").arg(dataDir));
                 // fall through, back to choosing screen
             }

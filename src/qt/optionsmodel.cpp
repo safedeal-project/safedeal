@@ -1,12 +1,13 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include "config/safedeal-config.h"
+#include "config/pivx-config.h"
 #endif
 
 #include "optionsmodel.h"
@@ -68,10 +69,6 @@ void OptionsModel::Init()
     if (!settings.contains("fCoinControlFeatures"))
         settings.setValue("fCoinControlFeatures", false);
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
-
-    if (!settings.contains("fShowColdStakingScreen"))
-        settings.setValue("fShowColdStakingScreen", false);
-    showColdStakingScreen = settings.value("fShowColdStakingScreen", false).toBool();
 
     if (!settings.contains("fShowMasternodesTab"))
         settings.setValue("fShowMasternodesTab", masternodeConfig.getCount());
@@ -180,7 +177,7 @@ void OptionsModel::setWindowDefaultOptions(QSettings& settings, bool reset)
 void OptionsModel::setDisplayDefaultOptions(QSettings& settings, bool reset)
 {
     if (!settings.contains("nDisplayUnit") || reset)
-        settings.setValue("nDisplayUnit", BitcoinUnits::SFD);
+        settings.setValue("nDisplayUnit", BitcoinUnits::PIV);
     nDisplayUnit = settings.value("nDisplayUnit").toInt();
     if (!settings.contains("digits") || reset)
         settings.setValue("digits", "2");
@@ -193,8 +190,8 @@ void OptionsModel::setDisplayDefaultOptions(QSettings& settings, bool reset)
     if (!SoftSetArg("-lang", settings.value("language").toString().toStdString()))
         addOverriddenOption("-lang");
 
-    if (settings.contains("nAnonymizeSafeDealAmount") || reset)
-        SoftSetArg("-anonymizesafedealamount", settings.value("nAnonymizeSafeDealAmount").toString().toStdString());
+    if (settings.contains("nAnonymizePivxAmount") || reset)
+        SoftSetArg("-anonymizepivxamount", settings.value("nAnonymizePivxAmount").toString().toStdString());
 
     if (!settings.contains("strThirdPartyTxUrls") || reset)
         settings.setValue("strThirdPartyTxUrls", "");
@@ -213,7 +210,7 @@ void OptionsModel::Reset()
 
     // Remove all entries from our QSettings object
     settings.clear();
-    resetSettings = true; // Needed in safedeal.cpp during shotdown to also remove the window positions
+    resetSettings = true; // Needed in pivx.cpp during shotdown to also remove the window positions
 
     // default setting for OptionsModel::StartAtStartup - disabled
     if (GUIUtil::GetStartOnSystemStartup())
@@ -286,8 +283,6 @@ QVariant OptionsModel::data(const QModelIndex& index, int role) const
             return settings.value("language");
         case CoinControlFeatures:
             return fCoinControlFeatures;
-        case ShowColdStakingScreen:
-            return showColdStakingScreen;
         case DatabaseCache:
             return settings.value("nDatabaseCache");
         case ThreadsScriptVerif:
@@ -430,11 +425,6 @@ bool OptionsModel::setData(const QModelIndex& index, const QVariant& value, int 
             fCoinControlFeatures = value.toBool();
             settings.setValue("fCoinControlFeatures", fCoinControlFeatures);
             Q_EMIT coinControlFeaturesChanged(fCoinControlFeatures);
-            break;
-        case ShowColdStakingScreen:
-            this->showColdStakingScreen = value.toBool();
-            settings.setValue("fShowColdStakingScreen", this->showColdStakingScreen);
-            Q_EMIT showHideColdStakingScreen(this->showColdStakingScreen);
             break;
         case DatabaseCache:
             if (settings.value("nDatabaseCache") != value) {

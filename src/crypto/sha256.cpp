@@ -1,4 +1,6 @@
 // Copyright (c) 2014 The Bitcoin developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,6 +9,7 @@
 #include "crypto/common.h"
 
 #include <string.h>
+#include <stdexcept>
 
 // Internal implementation code.
 namespace
@@ -171,6 +174,15 @@ void CSHA256::Finalize(unsigned char hash[OUTPUT_SIZE])
     WriteBE64(sizedesc, bytes << 3);
     Write(pad, 1 + ((119 - (bytes % 64)) % 64));
     Write(sizedesc, 8);
+    FinalizeNoPadding(hash, false);
+}
+
+void CSHA256::FinalizeNoPadding(unsigned char hash[OUTPUT_SIZE], bool enforce_compression)
+{
+    if (enforce_compression && bytes != 64) {
+        throw std::length_error("SHA256Compress should be invoked with a 512-bit block");
+    }
+
     WriteBE32(hash, s[0]);
     WriteBE32(hash + 4, s[1]);
     WriteBE32(hash + 8, s[2]);

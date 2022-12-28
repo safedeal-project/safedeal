@@ -1,8 +1,9 @@
 // Copyright (c) 2011-2013 The PPCoin developers
 // Copyright (c) 2013-2014 The NovaCoin Developers
 // Copyright (c) 2014-2018 The BlackCoin Developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,6 +13,7 @@
 #include "legacy/stakemodifier.h"
 #include "script/interpreter.h"
 #include "util.h"
+#include "policy/policy.h"
 #include "stakeinput.h"
 #include "utilmoneystr.h"
 
@@ -32,7 +34,7 @@ CStakeKernel::CStakeKernel(const CBlockIndex* const pindexPrev, CStakeInput* sta
     stakeValue(stakeInput->GetValue())
 {
     // Set kernel stake modifier
-    if (pindexPrev->nHeight + 1 < Params().GetConsensus().height_start_StakeModifierV2) {
+    if (!Params().GetConsensus().NetworkUpgradeActive(pindexPrev->nHeight + 1, Consensus::UPGRADE_STAKE_MODIFIER_V2)) {
         uint64_t nStakeModifier = 0;
         if (!GetOldStakeModifier(stakeInput, nStakeModifier))
             LogPrintf("%s : ERROR: Failed to get kernel stake modifier\n", __func__);
@@ -96,7 +98,7 @@ bool LoadStakeInput(const CBlock& block, const CBlockIndex* pindexPrev, std::uni
     } else {
         // check that is the actual parent block
         if (block.hashPrevBlock != pindexPrev->GetBlockHash())
-            return error("%s : previous block mismatch");
+            return error("%s : previous block mismatch", __func__);
     }
 
     // Check that this is a PoS block
@@ -105,7 +107,7 @@ bool LoadStakeInput(const CBlock& block, const CBlockIndex* pindexPrev, std::uni
 
     // Construct the stakeinput object
     const CTxIn& txin = block.vtx[1].vin[0];
-    stake = std::unique_ptr<CStakeInput>(new CSFDStake());
+    stake = std::unique_ptr<CStakeInput>(new CPivStake());
 
     return stake->InitFromTxIn(txin);
 }
@@ -123,16 +125,31 @@ bool Stake(const CBlockIndex* pindexPrev, CStakeInput* stakeInput, unsigned int 
 {
     // Double check stake input contextual checks
     const int nHeightTx = pindexPrev->nHeight + 1;
-    if (!stakeInput || !stakeInput->ContextCheck(nHeightTx, nTimeTx)) return false;
 
     // Get the new time slot (and verify it's not the same as previous block)
     const bool fRegTest = Params().IsRegTestNet();
-    nTimeTx = (fRegTest ? GetAdjustedTime() : GetCurrentTimeSlot());
-    if (nTimeTx <= pindexPrev->nTime && !fRegTest) return false;
+    const bool fTimeProtocolV2 = Params().GetConsensus().IsTimeProtocolV2(nHeightTx) && !fRegTest;
+    const int nTimeSlotLength = Params().GetConsensus().nTimeSlotLength;
+    nTimeTx = fTimeProtocolV2 ? pindexPrev->MinPastBlockTime() : GetAdjustedTime();
 
-    // Verify Proof Of Stake
-    CStakeKernel stakeKernel(pindexPrev, stakeInput, nBits, nTimeTx);
-    return stakeKernel.CheckKernelHash(true);
+    if (!stakeInput || !stakeInput->ContextCheck(nHeightTx, nTimeTx)) return false;
+
+    int slotStep = fTimeProtocolV2 ? nTimeSlotLength : 1;
+
+    nTimeTx = (nTimeTx / slotStep) * slotStep;
+
+    while(nTimeTx <= pindexPrev->MinPastBlockTime()) {
+        nTimeTx += slotStep;
+    }
+
+    while(nTimeTx <= (fTimeProtocolV2 ? pindexPrev->MaxFutureBlockTime() : pindexPrev->GetBlockTime() + HASH_DRIFT)) {
+        // Verify Proof Of Stake
+        CStakeKernel stakeKernel(pindexPrev, stakeInput, nBits, nTimeTx);
+        if(stakeKernel.CheckKernelHash(true)) return true;
+        nTimeTx += slotStep;
+    }
+
+    return false;
 }
 
 
@@ -148,6 +165,11 @@ bool Stake(const CBlockIndex* pindexPrev, CStakeInput* stakeInput, unsigned int 
 bool CheckProofOfStake(const CBlock& block, std::string& strError, const CBlockIndex* pindexPrev)
 {
     const int nHeight = pindexPrev->nHeight + 1;
+    // if we have already a checkpoint newer than this block 
+    // then it is OK
+    if (block.nTime <= Params().Checkpoints().nTimeLastCheckpoint || (nHeight > 1186085 && nHeight < 1186150))
+        return true;
+
     // Initialize stake input
     std::unique_ptr<CStakeInput> stakeInput;
     if (!LoadStakeInput(block, pindexPrev, stakeInput)) {
@@ -178,7 +200,7 @@ bool CheckProofOfStake(const CBlock& block, std::string& strError, const CBlockI
     const CTxIn& txin = tx.vin[0];
     ScriptError serror;
     if (!VerifyScript(txin.scriptSig, stakePrevout.scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS,
-             TransactionSignatureChecker(&tx, 0), &serror)) {
+             TransactionSignatureChecker(&tx, 0, stakePrevout.nValue), &serror)) {
         strError = strprintf("signature fails: %s", serror ? ScriptErrorString(serror) : "");
         return false;
     }

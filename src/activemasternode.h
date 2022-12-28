@@ -1,12 +1,14 @@
 // Copyright (c) 2014-2016 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef ACTIVEMASTERNODE_H
 #define ACTIVEMASTERNODE_H
 
+#include "activemasternodeconfig.h"
 #include "init.h"
 #include "key.h"
 #include "masternode.h"
@@ -16,7 +18,6 @@
 
 #define ACTIVE_MASTERNODE_INITIAL 0 // initial state
 #define ACTIVE_MASTERNODE_SYNC_IN_PROCESS 1
-#define ACTIVE_MASTERNODE_INPUT_TOO_NEW 2
 #define ACTIVE_MASTERNODE_NOT_CAPABLE 3
 #define ACTIVE_MASTERNODE_STARTED 4
 
@@ -24,49 +25,40 @@
 class CActiveMasternode
 {
 private:
-    // critical section to protect the inner data structures
-    mutable RecursiveMutex cs;
-
     /// Ping Masternode
     bool SendMasternodePing(std::string& errorMessage);
-
-    /// Create Masternode broadcast, needs to be relayed manually after that
-    bool CreateBroadcast(CTxIn vin, CService service, CKey key, CPubKey pubKey, CKey keyMasternode, CPubKey pubKeyMasternode, std::string& errorMessage, CMasternodeBroadcast &mnb);
-
-    /// Get 1000 SFD input that can be used for the Masternode
-    bool GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex);
-    bool GetVinFromOutput(COutput out, CTxIn& vin, CPubKey& pubkey, CKey& secretKey);
-
-public:
-    // Initialized by init.cpp
-    // Keys for the main Masternode
-    CPubKey pubKeyMasternode;
-
-    // Initialized while registering Masternode
-    CTxIn vin;
-    CService service;
 
     int status;
     std::string notCapableReason;
 
+public:
+
     CActiveMasternode()
     {
+        vin = nullopt;
         status = ACTIVE_MASTERNODE_INITIAL;
     }
 
+    std::string strAlias {""};
+
+    // Initialized by init.cpp
+    // Keys for the main Masternode
+    CPubKey pubKeyMasternode;
+
+    std::string strMasterNodePrivKey {""};
+
+    // Initialized while registering Masternode
+    Optional<CTxIn> vin;
+    CService service;
+
     /// Manage status of main Masternode
     void ManageStatus();
-    std::string GetStatus();
-
-    /// Create Masternode broadcast, needs to be relayed manually after that
-    bool CreateBroadcast(std::string strService, std::string strKey, std::string strTxHash, std::string strOutputIndex, std::string& errorMessage, CMasternodeBroadcast &mnb, bool fOffline = false);
-
-    /// Get 1000 SFD input that can be used for the Masternode
-    bool GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey);
-    std::vector<COutput> SelectCoinsMasternode();
+    void ResetStatus();
+    std::string GetStatusMessage() const;
+    int GetStatus() const { return status; }
 
     /// Enable cold wallet mode (run a Masternode with no funds)
     bool EnableHotColdMasterNode(CTxIn& vin, CService& addr);
 };
 
-#endif
+#endif //ACTIVEMASTERNODE_H

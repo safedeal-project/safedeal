@@ -1,7 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -20,7 +21,6 @@ class CScriptID;
 /** A virtual base class for key stores */
 class CKeyStore
 {
-
 public:
     // todo: Make it protected again once we are more advanced in the wallet/spkm decoupling.
     mutable RecursiveMutex cs_KeyStore;
@@ -35,7 +35,7 @@ public:
     virtual bool HaveKey(const CKeyID& address) const = 0;
     virtual bool GetKey(const CKeyID& address, CKey& keyOut) const = 0;
     virtual void GetKeys(std::set<CKeyID>& setAddress) const = 0;
-    virtual bool GetPubKey(const CKeyID& address, CPubKey& vchPubKeyOut) const;
+    virtual bool GetPubKey(const CKeyID& address, CPubKey& vchPubKeyOut) const = 0;
 
     //! Support for BIP 0013 : see https://github.com/bitcoin/bips/blob/master/bip-0013.mediawiki
     virtual bool AddCScript(const CScript& redeemScript) = 0;
@@ -50,6 +50,7 @@ public:
 };
 
 typedef std::map<CKeyID, CKey> KeyMap;
+typedef std::map<CKeyID, CPubKey> WatchKeyMap;
 typedef std::map<CScriptID, CScript> ScriptMap;
 typedef std::set<CScript> WatchOnlySet;
 
@@ -58,11 +59,14 @@ class CBasicKeyStore : public CKeyStore
 {
 protected:
     KeyMap mapKeys;
+    WatchKeyMap mapWatchKeys;
     ScriptMap mapScripts;
     WatchOnlySet setWatchOnly;
 
 public:
+
     bool AddKeyPubKey(const CKey& key, const CPubKey& pubkey);
+    bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
     bool HaveKey(const CKeyID& address) const;
     void GetKeys(std::set<CKeyID>& setAddress) const;
     bool GetKey(const CKeyID& address, CKey& keyOut) const;

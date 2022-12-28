@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -145,12 +146,8 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
     out.pushKV("type", GetTxnOutputType(type));
 
     UniValue a(UniValue::VARR);
-    if (type == TX_COLDSTAKE && addresses.size() == 2) {
-        a.push_back(EncodeDestination(addresses[0], CChainParams::STAKING_ADDRESS));
-        a.push_back(EncodeDestination(addresses[1], CChainParams::PUBKEY_ADDRESS));
-    } else {
-        for (const CTxDestination& addr : addresses)
-            a.push_back(EncodeDestination(addr));
+    for (const CTxDestination& addr : addresses) {
+        a.push_back(EncodeDestination(addr));
     }
     out.pushKV("addresses", a);
 }

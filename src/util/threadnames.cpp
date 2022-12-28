@@ -1,9 +1,11 @@
 // Copyright (c) 2018-2019 The Bitcoin Core developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include <config/safedeal-config.h>
+#include <config/pivx-config.h>
 #endif
 
 #include <thread>

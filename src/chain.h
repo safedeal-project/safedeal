@@ -3,8 +3,9 @@
 // Copyright (c) 2011-2013 The PPCoin developers
 // Copyright (c) 2013-2014 The NovaCoin Developers
 // Copyright (c) 2014-2018 The BlackCoin Developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -139,7 +140,7 @@ enum BlockStatus {
      */
     BLOCK_VALID_TRANSACTIONS = 3,
 
-    //! Outputs do not overspend inputs, no double spends, coinbase output ok, immature coinbase spends, BIP30.
+    //! Outputs do not overspend inputs, no double spends, coinbase output ok, immature coinbase spends.
     //! Implies all parents are also at least CHAIN.
     BLOCK_VALID_CHAIN = 4,
 
@@ -227,6 +228,9 @@ public:
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId{0};
 
+    //! (memory only) paid masternode.
+    CScript* paidPayee{nullptr};
+
     CBlockIndex() {}
     CBlockIndex(const CBlock& block);
 
@@ -256,6 +260,7 @@ public:
     void SetNewStakeModifier(const uint256& prevoutId);     // generates and sets new v2 modifier
     uint64_t GetStakeModifierV1() const;
     uint256 GetStakeModifierV2() const;
+    CScript* GetPaidPayee();
 
     //! Check whether this block index entry is valid up to the passed validity level.
     bool IsValid(enum BlockStatus nUpTo = BLOCK_VALID_TRANSACTIONS) const;
@@ -270,10 +275,6 @@ public:
 };
 
 /** Used to marshal pointers into hashes for db storage. */
-
-// New serialization introduced with 4.0.99
-static const int DBI_SER_VERSION_NO_ZC = 1000000;   // removes nMoneySupply
-
 class CDiskBlockIndex : public CBlockIndex
 {
 public:
@@ -308,15 +309,14 @@ public:
         if (nStatus & BLOCK_HAVE_UNDO)
             READWRITE(VARINT(nUndoPos));
 
-
-         READWRITE(nFlags);
-         READWRITE(this->nVersion);
-         READWRITE(vStakeModifier);
-         READWRITE(hashPrev);
-         READWRITE(hashMerkleRoot);
-         READWRITE(nTime);
-         READWRITE(nBits);
-         READWRITE(nNonce);        
+        READWRITE(nFlags);
+        READWRITE(this->nVersion);
+        READWRITE(vStakeModifier);
+        READWRITE(hashPrev);
+        READWRITE(hashMerkleRoot);
+        READWRITE(nTime);
+        READWRITE(nBits);
+        READWRITE(nNonce);
     }
 
 
@@ -335,69 +335,10 @@ public:
 
     std::string ToString() const
     {
-        std::string str = "CDiskBlockIndex(";
-        str += CBlockIndex::ToString();
-        str += strprintf("\n                hashBlock=%s, hashPrev=%s)",
-            GetBlockHash().ToString(),
-            hashPrev.ToString());
-        return str;
-    }
-};
-
-/** Legacy block index - used to retrieve old serializations */
-
-class CLegacyBlockIndex : public CBlockIndex
-{
-public:
-    int64_t nMint = 0;
-    uint256 hashNext{};
-    uint256 hashPrev{};
-    uint64_t nStakeModifier = 0;
-    uint256 nStakeModifierV2{};
-    COutPoint prevoutStake{};
-    unsigned int nStakeTime = 0;
-    int64_t nMoneySupply = 0;
-
-
-    ADD_SERIALIZE_METHODS;
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
-    {
-        int nSerVersion = s.GetVersion();
-        if (!(s.GetType() & SER_GETHASH))
-            READWRITE(VARINT(nSerVersion));
-
-        if (nSerVersion >= DBI_SER_VERSION_NO_ZC) {
-            // no extra serialized field
-            return;
-        }
-
-        if (!ser_action.ForRead()) {
-            // legacy block index shouldn't be used to write
-            return;
-        }
-
-        READWRITE(VARINT(nHeight));
-        READWRITE(VARINT(nStatus));
-        READWRITE(VARINT(nTx));
-        if (nStatus & (BLOCK_HAVE_DATA | BLOCK_HAVE_UNDO))
-            READWRITE(VARINT(nFile));
-        if (nStatus & BLOCK_HAVE_DATA)
-            READWRITE(VARINT(nDataPos));
-        if (nStatus & BLOCK_HAVE_UNDO)
-            READWRITE(VARINT(nUndoPos));
-
-
-         READWRITE(nMoneySupply);
-         READWRITE(nFlags);
-         READWRITE(this->nVersion);
-         READWRITE(vStakeModifier);
-         READWRITE(hashPrev);
-         READWRITE(hashMerkleRoot);
-         READWRITE(nTime);
-         READWRITE(nBits);
-         READWRITE(nNonce);
+        return strprintf("CDiskBlockIndex(%s\n                hashBlock=%s, hashPrev=%s)",
+                CBlockIndex::ToString(),
+                GetBlockHash().ToString(),
+                hashPrev.ToString());
     }
 };
 
@@ -405,36 +346,44 @@ public:
 class CChain
 {
 private:
+    mutable RecursiveMutex cs;
     std::vector<CBlockIndex*> vChain;
 
 public:
     /** Returns the index entry for the genesis block of this chain, or NULL if none. */
     CBlockIndex* Genesis() const
     {
-        return vChain.size() > 0 ? vChain[0] : NULL;
+        return WITH_LOCK(cs, return vChain.size() > 0 ? vChain[0] : NULL);
     }
 
     /** Returns the index entry for the tip of this chain, or NULL if none. */
     CBlockIndex* Tip(bool fProofOfStake = false) const
     {
-        if (vChain.size() < 1)
-            return NULL;
+        LOCK(cs);
 
-        CBlockIndex* pindex = vChain[vChain.size() - 1];
+        auto s = vChain.size();
+        if (s < 1) return nullptr;
+        return vChain[s - 1];
+    }
 
-        if (fProofOfStake) {
-            while (pindex && pindex->pprev && !pindex->IsProofOfStake())
-                pindex = pindex->pprev;
-        }
-        return pindex;
+    inline uint256 TipHash() 
+    {
+        const auto tip = WITH_LOCK(cs, return Tip());
+        if(tip) return Tip()->GetBlockHash();
+        return UINT256_ZERO;
+    }
+
+    inline uint64_t TipTime()
+    {
+        const auto tip = WITH_LOCK(cs, return Tip());
+        if(tip) return Tip()->GetBlockTime();
+        return 0;
     }
 
     /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
     CBlockIndex* operator[](int nHeight) const
     {
-        if (nHeight < 0 || nHeight >= (int)vChain.size())
-            return NULL;
-        return vChain[nHeight];
+        return WITH_LOCK(cs, return nHeight < 0 || nHeight >= (int)vChain.size() ? nullptr : vChain[nHeight]);
     }
 
     /** Compare two chains efficiently. */
@@ -447,22 +396,19 @@ public:
     /** Efficiently check whether a block is present in this chain. */
     bool Contains(const CBlockIndex* pindex) const
     {
-        return (*this)[pindex->nHeight] == pindex;
+        return WITH_LOCK(cs, return (*this)[pindex->nHeight] == pindex);
     }
 
     /** Find the successor of a block in this chain, or NULL if the given index is not found or is the tip. */
     CBlockIndex* Next(const CBlockIndex* pindex) const
     {
-        if (Contains(pindex))
-            return (*this)[pindex->nHeight + 1];
-        else
-            return NULL;
+        return WITH_LOCK(cs, return Contains(pindex) ? (*this)[pindex->nHeight + 1] : nullptr);
     }
 
     /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
     int Height() const
     {
-        return vChain.size() - 1;
+        return WITH_LOCK(cs, return vChain.size() - 1);
     }
 
     /** Set/initialize a chain with a given tip. */
@@ -473,9 +419,9 @@ public:
 
     /** Find the last common block between this chain and a block index entry. */
     const CBlockIndex* FindFork(const CBlockIndex* pindex) const;
-
-    /** Check if new message signatures are active **/
-    bool NewSigsActive() { return Params().GetConsensus().IsMessSigV2(Height()); }
 };
+
+/** The currently-connected chain of blocks (protected by cs_main). */
+extern CChain chainActive;
 
 #endif // BITCOIN_CHAIN_H

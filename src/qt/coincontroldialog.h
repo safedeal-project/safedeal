@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2013 The Bitcoin developers
-//Copyright (c) 2017-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,7 +9,7 @@
 #define BITCOIN_QT_COINCONTROLDIALOG_H
 
 #include "amount.h"
-#include "qt/safedeal/snackbar.h"
+#include "qt/pivx/snackbar.h"
 
 #include <QAbstractButton>
 #include <QAction>
@@ -45,7 +46,7 @@ class CoinControlDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit CoinControlDialog(QWidget* parent = nullptr, bool _forDelegation = false);
+    explicit CoinControlDialog(QWidget* parent = nullptr);
     ~CoinControlDialog();
 
     void setModel(WalletModel* model);
@@ -58,7 +59,7 @@ public:
 
     static QString getPriorityLabel(double dPriority, double mempoolEstimatePriority);
 
-    static CCoinControl* coinControl;
+    CCoinControl* coinControl;
 
 private:
     Ui::CoinControlDialog* ui;
@@ -66,7 +67,6 @@ private:
     WalletModel* model;
     int sortColumn;
     Qt::SortOrder sortOrder;
-    bool forDelegation;
     QList<CAmount> payAmounts{};
     unsigned int nSelectableInputs{0};
 

@@ -1,6 +1,7 @@
 // Copyright (c) 2014-2015 The Dash developers
-//Copyright (c) 2015-2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,11 +26,14 @@ extern CMasternodePayments masternodePayments;
 #define MNPAYMENTS_SIGNATURES_REQUIRED 6
 #define MNPAYMENTS_SIGNATURES_TOTAL 10
 
+extern uint64_t reconsiderWindowMin;
+extern uint64_t reconsiderWindowTime;
+
 void ProcessMessageMasternodePayments(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 bool IsBlockPayeeValid(const CBlock& block, int nBlockHeight);
 std::string GetRequiredPaymentsString(int nBlockHeight);
-bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMinted);
-void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees, bool fProofOfStake);
+bool IsBlockValueValid(int nHeight, CAmount nExpectedValue, CAmount nMinted);
+void FillBlockPayee(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, bool fProofOfStake);
 
 void DumpMasternodePayments();
 
@@ -88,6 +92,9 @@ public:
 // Keep track of votes for payees from masternodes
 class CMasternodeBlockPayees
 {
+    private:
+    bool IsTransactionValidV1(const CTransaction& txNew, int nBlockHeight);
+    bool IsTransactionValidV2(const CTransaction& txNew, int nBlockHeight);
 public:
     int nBlockHeight;
     std::vector<CMasternodePayee> vecPayments;
@@ -103,7 +110,7 @@ public:
         vecPayments.clear();
     }
 
-    void AddPayee(CScript payeeIn, int nIncrement)
+    void AddPayee(const CScript& payeeIn, int nIncrement)
     {
         LOCK(cs_vecPayments);
 
@@ -133,7 +140,7 @@ public:
         return (nVotes > -1);
     }
 
-    bool HasPayeeWithVotes(CScript payee, int nVotesReq)
+    bool HasPayeeWithVotes(const CScript& payee, int nVotesReq)
     {
         LOCK(cs_vecPayments);
 
@@ -144,7 +151,7 @@ public:
         return false;
     }
 
-    bool IsTransactionValid(const CTransaction& txNew);
+    bool IsTransactionValid(const CTransaction& txNew, int nBlockHeight);
     std::string GetRequiredPaymentsString();
 
     ADD_SERIALIZE_METHODS;
@@ -189,7 +196,7 @@ public:
     bool IsValid(CNode* pnode, std::string& strError);
     void Relay();
 
-    void AddPayee(CScript payeeIn)
+    void AddPayee(const CScript& payeeIn)
     {
         payee = payeeIn;
     }
@@ -230,9 +237,10 @@ public:
 class CMasternodePayments
 {
 private:
-    int nSyncedFromPeer;
     int nLastBlockHeight;
 
+    bool GetBlockPayeeV1(int nBlockHeight, CScript& payee);
+    bool GetBlockPayeeV2(int nBlockHeight, CScript& payee);
 public:
     std::map<uint256, CMasternodePaymentWinner> mapMasternodePayeeVotes;
     std::map<int, CMasternodeBlockPayees> mapMasternodeBlocks;
@@ -240,7 +248,6 @@ public:
 
     CMasternodePayments()
     {
-        nSyncedFromPeer = 0;
         nLastBlockHeight = 0;
     }
 
@@ -252,17 +259,16 @@ public:
     }
 
     bool AddWinningMasternode(CMasternodePaymentWinner& winner);
-    bool ProcessBlock(int nBlockHeight);
+    void ProcessBlock(int nBlockHeight);
 
     void Sync(CNode* node, int nCountNeeded);
     void CleanPaymentList();
-    int LastPayment(CMasternode& mn);
 
     bool GetBlockPayee(int nBlockHeight, CScript& payee);
     bool IsTransactionValid(const CTransaction& txNew, int nBlockHeight);
     bool IsScheduled(CMasternode& mn, int nNotBlockHeight);
 
-    bool CanVote(COutPoint outMasternode, int nBlockHeight)
+    bool CanVote(const COutPoint& outMasternode, int nBlockHeight)
     {
         LOCK(cs_mapMasternodePayeeVotes);
 
@@ -277,13 +283,10 @@ public:
         return true;
     }
 
-    int GetMinMasternodePaymentsProto();
     void ProcessMessageMasternodePayments(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
     std::string GetRequiredPaymentsString(int nBlockHeight);
-    void FillBlockPayee(CMutableTransaction& txNew, int64_t nFees, bool fProofOfStake);
+    void FillBlockPayee(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, bool fProofOfStake);
     std::string ToString() const;
-    int GetOldestBlock();
-    int GetNewestBlock();
 
     ADD_SERIALIZE_METHODS;
 

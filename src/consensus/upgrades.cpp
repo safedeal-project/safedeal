@@ -1,6 +1,7 @@
 // Copyright (c) 2018 The Zcash developers
-//Copyright (c) 2020 The PIVX developers
-//Copyright (c) 2020 The SafeDeal developers
+// Copyright (c) 2020 The PIVX developers
+// Copyright (c) 2021-2022 The DECENOMY Core Developers
+// Copyright (c) 2022-2023 The SafeDeal Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,6 +10,9 @@
 /**
  * General information about each network upgrade.
  * Ordered by Consensus::UpgradeIndex.
+ *
+ * If the upgrade name has many words, use the '_' character to divide them.
+ * We are using it in the -nuparams startup arg and input it with spaces is just ugly.
  */
 const struct NUInfo NetworkUpgradeInfo[Consensus::MAX_NETWORK_UPGRADES] = {
         {
@@ -16,11 +20,41 @@ const struct NUInfo NetworkUpgradeInfo[Consensus::MAX_NETWORK_UPGRADES] = {
                 /*.strInfo =*/ "SafeDeal network",
         },
         {
-                /*.strName =*/ "Purple Fenix",
-                /*.strInfo =*/ "SafeDeal network v5.0.0 update",
+                /*.strName =*/ "PoS",
+                /*.strInfo =*/ "Proof of Stake Consensus activation",
         },
         {
-                /*.strName =*/ "Test dummy",
+                /*.strName =*/ "PoS_v2",
+                /*.strInfo =*/ "New selection for stake modifier",
+        },
+
+        {
+                /*.strName =*/ "BIP65",
+                /*.strInfo =*/ "CLTV (BIP65) activation - start block v5",
+        },
+
+        {
+                /*.strName =*/ "stake_modifier_v2",
+                /*.strInfo =*/ "new 256-bit stake modifier - start block v6",
+        },
+        {
+                /*.strName =*/ "time_protocol_v2",
+                /*.strInfo =*/ "new message sigs - start block v7 - time protocol - zc spend v4",
+        },
+        {
+                /*.strName =*/ "p2pkh_block_signatures",
+                /*.strInfo =*/ "activation of p2pkh block signatures",
+        },
+        {
+                /*.strName =*/ "Stake_min_depth_v2",
+                /*.strInfo =*/ "Increases the stake min depth",
+        },
+        {
+                /*.strName =*/ "masternode_rank_v2",
+                /*.strInfo =*/ "new masternode ranking system",
+        },
+        {
+                /*.strName =*/ "Test_dummy",
                 /*.strInfo =*/ "Test dummy info",
         },
 };
@@ -59,7 +93,7 @@ bool NetworkUpgradeActive(
 }
 
 int CurrentEpoch(int nHeight, const Consensus::Params& params) {
-    for (auto idxInt = Consensus::MAX_NETWORK_UPGRADES - 1; idxInt >= Consensus::BASE_NETWORK; idxInt--) {
+    for (auto idxInt = Consensus::MAX_NETWORK_UPGRADES - 1; idxInt > Consensus::BASE_NETWORK; idxInt--) {
         if (NetworkUpgradeActive(nHeight, params, Consensus::UpgradeIndex(idxInt))) {
             return idxInt;
         }
