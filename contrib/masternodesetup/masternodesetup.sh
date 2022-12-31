@@ -6,7 +6,8 @@ CONFIGFOLDER='/root/.sfdcoin'
 COIN_DAEMON='safedeald'
 COIN_CLI='safedeal-cli'
 COIN_PATH='/usr/local/bin/'
-COIN_TGZ=`curl -s https://api.github.com/repos/safedeal-project/safedeal/releases/latest | grep "browser_download_url.*Linux\\.zip" | cut -d : -f 2,3 | tr -d \" | xargs`
+COIN_TGZ=`curl -s https://api.github.com/repos/safedeal-project/safedeal/releases/latest | grep "browser_download_url.*x86_64-linux-gnu-daemon.tar.gz
+" | cut -d : -f 2,3 | tr -d \" | xargs`
 COIN_ZIP=$(echo $COIN_TGZ | awk -F'/' '{print $NF}')
 COIN_NAME='safedeal'
 COIN_PORT=62583
@@ -51,7 +52,7 @@ function download_node() {
   echo -e "${GREEN}Downloading and Installing VPS $COIN_NAME Daemon${NC}"
   cd $TMP_FOLDER >/dev/null 2>&1
   wget -q $COIN_TGZ
-  unzip $COIN_ZIP
+  tar -zxf $COIN_ZIP
   cd rev >/dev/null 2>&1
   chmod +x $COIN_DAEMON $COIN_CLI
   cp $COIN_DAEMON $COIN_CLI $COIN_PATH
