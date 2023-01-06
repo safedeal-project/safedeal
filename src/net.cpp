@@ -51,7 +51,7 @@
 // Query the DNS seeds at every 10 minutes (600s)
 #define DNS_SEEDS_INTERVAL 600
 
-#define MAX_MASTERNODES_SEEDED_AT_ONCE 10
+#define MAX_MASTERNODES_SEEDED_AT_ONCE 16
 
 // We add a random period time (0 to 1 seconds) to feeler connections to prevent synchronization.
 #define FEELER_SLEEP_WINDOW 1
@@ -1542,7 +1542,7 @@ void CConnman::ThreadDNSAddressSeed()
             return;
 
         LOCK(cs_vNodes);
-        if (vNodes.size() >= 2) {
+        if (vNodes.size() >= 4) {
             LogPrintf("P2P peers available. Skipped DNS seeding.\n");
             return;
         }
@@ -1571,7 +1571,7 @@ void CConnman::ThreadDNSAddressSeed()
             ipV6Count++;
         }
 
-        if(ipV4Count >= ipV6Count >= MAX_MASTERNODES_SEEDED_AT_ONCE) break;
+        if(ipV4Count >= MAX_MASTERNODES_SEEDED_AT_ONCE || ipV6Count >= MAX_MASTERNODES_SEEDED_AT_ONCE) break;
     }
 
     LogPrintf("Loading addresses from DNS seeds (could take a while)\n");
