@@ -288,33 +288,19 @@ UniValue startmasternode (const JSONRPCRequest& request)
         if (!fMasterNode) throw std::runtime_error("you must set masternode=1 in the configuration\n");
 
         UniValue resultsObj(UniValue::VARR);
+        
         auto amns = amnodeman.GetActiveMasternodes();
         auto legacy = amns.size() == 1 && amns[0].strAlias == "legacy";
 
         for (auto& amn : amns) {
+
             UniValue mnObj(UniValue::VOBJ);
 
             if (amn.GetStatus() != ACTIVE_MASTERNODE_STARTED) {
                 amn.ResetStatus();
-                if (fLock)
-                    pwalletMain->Lock();
             }
 
-            CMasternode* pmn = mnodeman.Find(*(amn.vin));
-
-            if (pmn) {
-                UniValue mnObj(UniValue::VOBJ);
-                mnObj.push_back(Pair("alias", amn.strAlias));
-                mnObj.push_back(Pair("txhash", amn.vin->prevout.hash.ToString()));
-                mnObj.push_back(Pair("outputidx", (uint64_t)amn.vin->prevout.n));
-                mnObj.push_back(Pair("netaddr", amn.service.ToString()));
-                mnObj.push_back(Pair("addr", EncodeDestination(pmn->pubKeyCollateralAddress.GetID())));
-                mnObj.push_back(Pair("status", amn.GetStatus()));
-                mnObj.push_back(Pair("message", amn.GetStatusMessage()));
-                if (legacy && amn.strAlias == "legacy") return amn.GetStatusMessage();
-                resultsObj.push_back(mnObj);
-            } else {
-                UniValue mnObj(UniValue::VOBJ);
+            if (amn.vin == nullopt) {
                 mnObj.push_back(Pair("alias", amn.strAlias));
                 mnObj.push_back(Pair("txhash", "N/A"));
                 mnObj.push_back(Pair("outputidx", -1));
@@ -323,10 +309,25 @@ UniValue startmasternode (const JSONRPCRequest& request)
                 mnObj.push_back(Pair("status", amn.GetStatus()));
                 mnObj.push_back(Pair("message", amn.GetStatusMessage()));
                 resultsObj.push_back(mnObj);
-                if (legacy && amn.strAlias == "legacy") return amn.GetStatusMessage();
+                if(legacy) break;
                 continue;
             }
+
+            CMasternode* pmn = mnodeman.Find(*(amn.vin));
+
+            mnObj.push_back(Pair("alias", amn.strAlias));
+            mnObj.push_back(Pair("txhash", amn.vin->prevout.hash.ToString()));
+            mnObj.push_back(Pair("outputidx", (uint64_t)amn.vin->prevout.n));
+            mnObj.push_back(Pair("netaddr", amn.service.ToString()));
+            mnObj.push_back(Pair("addr", pmn ? EncodeDestination(pmn->pubKeyCollateralAddress.GetID()) : "N/A"));
+            mnObj.push_back(Pair("status", amn.GetStatus()));
+            mnObj.push_back(Pair("message", amn.GetStatusMessage()));
+            resultsObj.push_back(mnObj);
+            if (legacy) break;
         }
+
+        if (fLock) pwalletMain->Lock();
+        if(legacy) amns[0].GetStatusMessage();
 
         return resultsObj;
     }
@@ -351,10 +352,9 @@ UniValue startmasternode (const JSONRPCRequest& request)
             CMasternodeBroadcast mnb;
             std::string errorMessage;
             bool fSuccess = false;
-            if (!StartMasternodeEntry(statusObj, mnb, fSuccess, mne, errorMessage, strCommand))
-                continue;
+            if (StartMasternodeEntry(statusObj, mnb, fSuccess, mne, errorMessage, strCommand))
+                RelayMNB(mnb, fSuccess, successful, failed);
             resultsObj.push_back(statusObj);
-            RelayMNB(mnb, fSuccess, successful, failed);
         }
         if (fLock)
             pwalletMain->Lock();
@@ -544,6 +544,7 @@ UniValue getmasternodestatus(const JSONRPCRequest& request)
     auto legacy = amns.size() == 1 && amns[0].strAlias == "legacy";
 
     for (auto& amn : amns) {
+
         if (amn.vin == nullopt) {
             UniValue mnObj(UniValue::VOBJ);
             mnObj.push_back(Pair("alias", amn.strAlias));
@@ -554,26 +555,22 @@ UniValue getmasternodestatus(const JSONRPCRequest& request)
             mnObj.push_back(Pair("status", amn.GetStatus()));
             mnObj.push_back(Pair("message", amn.GetStatusMessage()));
             resultsObj.push_back(mnObj);
-            if(legacy && amn.strAlias == "legacy") return mnObj;
+            if(legacy) return mnObj;
             continue;
         }
 
         CMasternode* pmn = mnodeman.Find(*(amn.vin));
 
-        if (pmn) {
-            UniValue mnObj(UniValue::VOBJ);
-            mnObj.push_back(Pair("alias", amn.strAlias));
-            mnObj.push_back(Pair("txhash", amn.vin->prevout.hash.ToString()));
-            mnObj.push_back(Pair("outputidx", (uint64_t)amn.vin->prevout.n));
-            mnObj.push_back(Pair("netaddr", amn.service.ToString()));
-            mnObj.push_back(Pair("addr", EncodeDestination(pmn->pubKeyCollateralAddress.GetID())));
-            mnObj.push_back(Pair("status", amn.GetStatus()));
-            mnObj.push_back(Pair("message", amn.GetStatusMessage()));
-            if(legacy && amn.strAlias == "legacy") return mnObj;
-            resultsObj.push_back(mnObj);
-        } else {
-            throw std::runtime_error("Masternode not found in the list of available masternodes. Current status: " + amn.GetStatusMessage());
-        }
+        UniValue mnObj(UniValue::VOBJ);
+        mnObj.push_back(Pair("alias", amn.strAlias));
+        mnObj.push_back(Pair("txhash", amn.vin->prevout.hash.ToString()));
+        mnObj.push_back(Pair("outputidx", (uint64_t)amn.vin->prevout.n));
+        mnObj.push_back(Pair("netaddr", amn.service.ToString()));
+        mnObj.push_back(Pair("addr", pmn ? EncodeDestination(pmn->pubKeyCollateralAddress.GetID()) : "N/A"));
+        mnObj.push_back(Pair("status", amn.GetStatus()));
+        mnObj.push_back(Pair("message", amn.GetStatusMessage()));
+        if(legacy) return mnObj;
+        resultsObj.push_back(mnObj);
     }
 
     return resultsObj;
