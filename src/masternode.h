@@ -145,7 +145,8 @@ public:
     int nScanningErrorCount;
     int nLastScanningErrorBlockHeight;
     CMasternodePing lastPing;
-
+    int64_t lastPaid = INT64_MAX;
+    
     CMasternode();
     CMasternode(const CMasternode& other);
 
