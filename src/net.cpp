@@ -1068,6 +1068,17 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
     int nInbound = 0;
     int nMaxInbound = nMaxConnections - (nMaxOutbound + nMaxFeeler);
     assert(nMaxInbound > 0);
+    
+    // close obsolete nodes' connection
+    {
+        LOCK(cs_vNodes);
+        for (CNode* pnode : vNodes) {
+            if (pnode->nVersion > 0 && pnode->nVersion < ActiveProtocol()) {
+                pnode->fDisconnect = true;
+                pnode->CloseSocketDisconnect();
+            }
+        }
+    }
 
     if (hSocket != INVALID_SOCKET)
         if (!addr.SetSockAddr((const struct sockaddr*)&sockaddr))
