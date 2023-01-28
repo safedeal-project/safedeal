@@ -114,7 +114,11 @@ Intro::Intro(QWidget* parent) : QDialog(parent, Qt::WindowSystemMenuHint | Qt::W
 
     setCssProperty(ui->frame, "container-welcome-step2");
     setCssProperty(ui->container, "container-welcome-stack");
+    #ifdef Q_OS_MAC
+    setCssProperty(ui->frame_2, "container-welcome-no-image");
+    #else
     setCssProperty(ui->frame_2, "container-welcome");
+    #endif
     setCssProperty(ui->label_2, "text-title-welcome");
     setCssProperty(ui->label_4, "text-intro-white");
     setCssProperty(ui->sizeWarningLabel, "text-intro-white");
