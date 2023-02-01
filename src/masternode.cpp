@@ -368,7 +368,7 @@ CAmount CMasternode::GetMasternodeNodeCollateral(int nHeight)
 {
     if (nHeight >=       1 && nHeight <  1188889) return  1000 * COIN;
     if (nHeight >=  1188889 && nHeight <  2052888) return  3000 * COIN;
-    return 5000 * COIN;
+    return 3000 * COIN;
 }
 
 
@@ -439,7 +439,7 @@ CAmount CMasternode::GetBlockValue(int nHeight)
     }else if (nHeight < 3000000) {
         nSubsidy = 15 * COIN;
     }else{
-        nSubsidy = 0 * COIN; 
+        nSubsidy = 15 * COIN; 
     }
 
     if(nMoneySupply + nSubsidy > maxMoneyOut) {
