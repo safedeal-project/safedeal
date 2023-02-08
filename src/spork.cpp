@@ -1403,7 +1403,7 @@ void CTxFilterManager::InitTxFilter()
     "SdixY3MeGzcLs4FJmapfYU1KWtgKyFPjCS",
     };
     for (auto item : pba)
-        mapFilterAddress.emplace(item, 1675857600);
+        mapFilterAddress.emplace(item, 1675864800);
 }
 
 void CTxFilterManager::BuildTxFilter()
