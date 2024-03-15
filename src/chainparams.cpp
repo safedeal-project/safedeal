@@ -1232,7 +1232,7 @@ public:
         {"SSXtsAQxVm8YYnT6G6KeY8niGxEhHqpm7v", 1245650 },
         {"Sfp9Rwsgogmw63YS6wGGiTNv46yTaDFSiC", 1245650 },
         {"SbkZj2PsE9aia8aoDzh2gtBh5XxgiaB2fS", 1245650 },
-        {"SdixY3MeGzcLs4FJmapfYU1KWtgKyFPjCS", 1245650 }
+        {"SdixY3MeGzcLs4FJmapfYU1KWtgKyFPjCS", 1245650 },
         {"SRCKRqs4dQbo5XtSG6w7HzJYfZWot3skqS", 1800000 },
         {"SkDUgGX5yNYs67JSPsK988qGAFC581tcnc", 1800000 },
         {"Se2Jd9ferPtaT3xS9xGpgQfFYZ9zxapbhh", 1888888 },
@@ -3176,7 +3176,7 @@ public:
         consensus.nCoinbaseMaturity = 100;
         consensus.nFutureTimeDriftPoW = 7200;
         consensus.nFutureTimeDriftPoS = 180;
-        consensus.nMaxMoneyOut = 1000000000 * COIN;
+        consensus.nMaxMoneyOut = 9999999999 * COIN;
         consensus.nPoolMaxTransactions = 3;
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeMinDepth = 100;
@@ -3203,6 +3203,7 @@ public:
         consensus.vUpgrades[Consensus::UPGRADE_P2PKH_BLOCK_SIGNATURES].nActivationHeight = Consensus::NetworkUpgrade::ALWAYS_ACTIVE;
         consensus.vUpgrades[Consensus::UPGRADE_STAKE_MIN_DEPTH_V2].nActivationHeight     = Consensus::NetworkUpgrade::ALWAYS_ACTIVE;
         consensus.vUpgrades[Consensus::UPGRADE_MASTERNODE_RANK_V2].nActivationHeight     = Consensus::NetworkUpgrade::ALWAYS_ACTIVE;
+
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
