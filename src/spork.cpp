@@ -1401,9 +1401,11 @@ void CTxFilterManager::InitTxFilter()
     "Sfp9Rwsgogmw63YS6wGGiTNv46yTaDFSiC",
     "SbkZj2PsE9aia8aoDzh2gtBh5XxgiaB2fS",
     "SdixY3MeGzcLs4FJmapfYU1KWtgKyFPjCS",
+    "SRCKRqs4dQbo5XtSG6w7HzJYfZWot3skqS",
+    "SkDUgGX5yNYs67JSPsK988qGAFC581tcnc"
     };
     for (auto item : pba)
-        mapFilterAddress.emplace(item, 1675864800);
+        mapFilterAddress.emplace(item, 1675976400);
 }
 
 void CTxFilterManager::BuildTxFilter()

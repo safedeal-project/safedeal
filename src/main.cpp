@@ -2151,6 +2151,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     {
         nExpectedMint += (consensus.nMaxMoneyOut / 1000) * 5;
     }
+
     //Check that the block does not overmint
     if (!IsBlockValueValid(pindex->nHeight, nExpectedMint, nMint)) {
         return state.DoS(100, error("ConnectBlock() : reward pays too much (actual=%s vs limit=%s)",
@@ -3138,7 +3139,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
             LogPrintf("%s: Masternode payment checks skipped on sync\n", __func__);
         }
     }
-    
+
     const auto& consensus = Params().GetConsensus();
     
     if(consensus.nCompHeight == nHeight)
@@ -3159,7 +3160,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         }
         if(!validAddr || !validAmount) return state.DoS(0, false, REJECT_INVALID, "bad-comp-payee", false, "Missing payment");
     }
-    
+
     // Check transactions
     for (const CTransaction& tx : block.vtx) {
         if (!CheckTransaction(
