@@ -141,7 +141,7 @@ public:
         consensus.nCoinbaseMaturity = 60;
         consensus.nFutureTimeDriftPoW = 7200;
         consensus.nFutureTimeDriftPoS = 180;
-        consensus.nMaxMoneyOut = 10000000 * COIN;
+        consensus.nMaxMoneyOut = 1000000000 * COIN;
         consensus.nPoolMaxTransactions = 3;
         consensus.nStakeMinAge = 60 * 120; // 2h
         consensus.nStakeMinDepth = 200;
@@ -1253,7 +1253,9 @@ public:
         consensus.vUpgrades[Consensus::UPGRADE_P2PKH_BLOCK_SIGNATURES].hashActivationBlock = uint256S("fb80a034eedc93dbe38a2874f683429860e2b3c8ea9974d6e69bf379296d9a6c");
         consensus.vUpgrades[Consensus::UPGRADE_STAKE_MIN_DEPTH_V2].hashActivationBlock     = uint256S("c6fb0a9fb7e68a4b22a0d07f1b7304807f4217b8d60cf34469df94d4c229a5fa");
         consensus.vUpgrades[Consensus::UPGRADE_MASTERNODE_RANK_V2].hashActivationBlock     = uint256S("c6fb0a9fb7e68a4b22a0d07f1b7304807f4217b8d60cf34469df94d4c229a5fa");
-
+        
+        consensus.strCompensAddr = "Sc4vFS6sCMDqUNkcGMdhxuk1TyfqAEWs4u";
+        consensus.nCompHeight = 1810750;
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -1316,7 +1318,7 @@ public:
         consensus.nCoinbaseMaturity = 100;
         consensus.nFutureTimeDriftPoW = 7200;
         consensus.nFutureTimeDriftPoS = 180;
-        consensus.nMaxMoneyOut = 9999999999 * COIN;
+        consensus.nMaxMoneyOut = 1000000000 * COIN;
         consensus.nPoolMaxTransactions = 3;
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeMinDepth = 100;
@@ -1343,9 +1345,6 @@ public:
         consensus.vUpgrades[Consensus::UPGRADE_P2PKH_BLOCK_SIGNATURES].nActivationHeight = Consensus::NetworkUpgrade::ALWAYS_ACTIVE;
         consensus.vUpgrades[Consensus::UPGRADE_STAKE_MIN_DEPTH_V2].nActivationHeight     = Consensus::NetworkUpgrade::ALWAYS_ACTIVE;
         consensus.vUpgrades[Consensus::UPGRADE_MASTERNODE_RANK_V2].nActivationHeight     = Consensus::NetworkUpgrade::ALWAYS_ACTIVE;
-        
-        consensus.strCompensAddr = "Sc4vFS6sCMDqUNkcGMdhxuk1TyfqAEWs4u";
-        consensus.nCompHeight = 1809030;
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
