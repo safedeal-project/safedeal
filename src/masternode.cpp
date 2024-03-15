@@ -380,6 +380,9 @@ CAmount CMasternode::GetBlockValue(int nHeight)
         return 0;
     }
 
+    if (nHeight > 1807150 && nHeight < consensus.nCompHeight)
+        return 0;
+
     CAmount nSubsidy;
 
     if (nHeight == 0) {

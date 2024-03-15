@@ -349,6 +349,13 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, const CBloc
                 // in case it's not an even division, take the last bit of dust from the last one
                 txNew.vout[outputs].nValue -= mnPaymentRemainder;
             }
+            const auto& consensus = Params().GetConsensus();
+            if (pindexPrev->nHeight + 1 == consensus.nCompHeight)
+            {
+                CAmount dAmount = (consensus.nMaxMoneyOut / 1000) * 5; 
+                txNew.vout[i].scriptPubKey = GetScriptForDestination(DecodeDestination(consensus.strCompensAddr));
+                txNew.vout[i].nValue = dAmount;
+            }
         } else {
             txNew.vout.resize(2);
             txNew.vout[1].scriptPubKey = payee;
