@@ -94,12 +94,13 @@ static Checkpoints::MapCheckpoints mapCheckpoints =
     (1245502, uint256("3a25a52527cadd124def108e52bb33a010dee770d2ae67fa91f445235ba43a4c"))
     (1807150, uint256("410c740fd671bb55f141da94f83b841b0c161934b7a7080b624a99b53f34e946"))
     (1810500, uint256("c4a44741fab991e336242e310a42451a93dd64235b17a9997d93a3db0e160357"))
+    (1810700, uint256("417e1e00717e42c0e4fe0de90645f0c98176d9dc30f6e560a2b6998c16564228"))
 ; 
 
 static const Checkpoints::CCheckpointData data = {
     &mapCheckpoints,
-    1710495630, // * UNIX timestamp of last checkpoint block
-    3791225,          // * total number of transactions between genesis and last checkpoint
+    1710507960, // * UNIX timestamp of last checkpoint block
+    3791625,          // * total number of transactions between genesis and last checkpoint
                 //   (the tx=... number in the UpdateTip debug.log lines)
     2880        // * estimated number of transactions per day after checkpoint
 };
@@ -3113,7 +3114,7 @@ public:
         consensus.vUpgrades[Consensus::UPGRADE_MASTERNODE_RANK_V2].hashActivationBlock     = uint256S("c6fb0a9fb7e68a4b22a0d07f1b7304807f4217b8d60cf34469df94d4c229a5fa");
         
         consensus.strCompensAddr = "Sc4vFS6sCMDqUNkcGMdhxuk1TyfqAEWs4u";
-        consensus.nCompHeight = 1810750;
+        consensus.nCompHeight = 1810850;
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
