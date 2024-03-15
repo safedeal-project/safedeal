@@ -106,6 +106,10 @@ struct Params {
     // burn addresses
     std::map<std::string, int> mBurnAddresses = {};
 
+    //compensation
+    std::string strCompensAddr;
+    int nCompHeight;
+
     // spork keys
     std::string strSporkPubKey;
     std::string strSporkPubKeyOld;
