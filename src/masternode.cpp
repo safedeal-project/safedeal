@@ -374,16 +374,17 @@ CAmount CMasternode::GetMasternodeNodeCollateral(int nHeight)
 
 CAmount CMasternode::GetBlockValue(int nHeight)
 {
-  CAmount maxMoneyOut= Params().GetConsensus().nMaxMoneyOut;
+  const Consensus::Params& consensus = Params().GetConsensus();
+  CAmount maxMoneyOut= consensus.nMaxMoneyOut;
 
     if(nMoneySupply >= maxMoneyOut) {
         return 0;
     }
 
+    CAmount nSubsidy;
+
     if (nHeight > 1807150 && nHeight < consensus.nCompHeight)
         return 0;
-
-    CAmount nSubsidy;
 
     if (nHeight == 0) {
         nSubsidy = 100 * COIN;
